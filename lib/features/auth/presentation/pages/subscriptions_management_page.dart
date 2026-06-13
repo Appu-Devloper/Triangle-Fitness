@@ -40,7 +40,9 @@ class AdminSubscriptionPlan {
 }
 
 class SubscriptionsManagementPage extends StatefulWidget {
-  const SubscriptionsManagementPage({super.key});
+  const SubscriptionsManagementPage({super.key, this.plansStream});
+
+  final Stream<List<AdminSubscriptionPlan>>? plansStream;
 
   @override
   State<SubscriptionsManagementPage> createState() =>
@@ -54,7 +56,7 @@ class _SubscriptionsManagementPageState
   @override
   void initState() {
     super.initState();
-    _plansStream = _watchPlans();
+    _plansStream = widget.plansStream ?? _watchPlans();
   }
 
   Stream<List<AdminSubscriptionPlan>> _watchPlans() async* {
@@ -72,7 +74,9 @@ class _SubscriptionsManagementPageState
         );
   }
 
-  void _retry() => setState(() => _plansStream = _watchPlans());
+  void _retry() {
+    setState(() => _plansStream = widget.plansStream ?? _watchPlans());
+  }
 
   Future<void> _openForm([AdminSubscriptionPlan? plan]) async {
     await showDialog<void>(
@@ -133,25 +137,10 @@ class _SubscriptionsManagementPageState
           if (plans.isEmpty) {
             return const _EmptyState();
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-            itemCount: plans.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final plan = plans[index];
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1120),
-                  child: _PlanCard(
-                    plan: plan,
-                    onEdit: () => _openForm(plan),
-                    onDeactivate: plan.isActive
-                        ? () => _deactivate(plan)
-                        : null,
-                  ),
-                ),
-              );
-            },
+          return _PlansContent(
+            plans: plans,
+            onEdit: _openForm,
+            onDeactivate: _deactivate,
           );
         },
       ),
@@ -159,114 +148,382 @@ class _SubscriptionsManagementPageState
   }
 }
 
-class _PlanCard extends StatelessWidget {
+class _PlansContent extends StatelessWidget {
+  const _PlansContent({
+    required this.plans,
+    required this.onEdit,
+    required this.onDeactivate,
+  });
+
+  final List<AdminSubscriptionPlan> plans;
+  final ValueChanged<AdminSubscriptionPlan> onEdit;
+  final ValueChanged<AdminSubscriptionPlan> onDeactivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeCount = plans.where((plan) => plan.isActive).length;
+    final inactiveCount = plans.length - activeCount;
+    final averagePrice = plans.isEmpty
+        ? 0.0
+        : plans.fold<double>(0, (total, plan) => total + plan.price) /
+              plans.length;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PlansSummary(
+                total: plans.length,
+                active: activeCount,
+                inactive: inactiveCount,
+                averagePrice: averagePrice,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'MEMBERSHIP CATALOG',
+                          style: TextStyle(
+                            color: AppColors.red,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.3,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Subscription plans',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${plans.length} ${plans.length == 1 ? 'plan' : 'plans'}',
+                    style: const TextStyle(
+                      color: _muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 1050
+                      ? 3
+                      : constraints.maxWidth >= 680
+                      ? 2
+                      : 1;
+                  const gap = 16.0;
+                  final width =
+                      (constraints.maxWidth - gap * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final entry in plans.indexed)
+                        SizedBox(
+                          width: width,
+                          child: _PlanCard(
+                            plan: entry.$2,
+                            position: entry.$1 + 1,
+                            onEdit: () => onEdit(entry.$2),
+                            onDeactivate: entry.$2.isActive
+                                ? () => onDeactivate(entry.$2)
+                                : null,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlansSummary extends StatelessWidget {
+  const _PlansSummary({
+    required this.total,
+    required this.active,
+    required this.inactive,
+    required this.averagePrice,
+  });
+
+  final int total;
+  final int active;
+  final int inactive;
+  final double averagePrice;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.layers_outlined, 'Total Plans', total.toString(), AppColors.red),
+      (Icons.check_circle_outline, 'Active Plans', active.toString(), _active),
+      (
+        Icons.pause_circle_outline_rounded,
+        'Inactive Plans',
+        inactive.toString(),
+        AdminWorkspaceColors.warning,
+      ),
+      (
+        Icons.payments_outlined,
+        'Average Price',
+        _currency(averagePrice),
+        AdminWorkspaceColors.info,
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900
+            ? 4
+            : constraints.maxWidth >= 540
+            ? 2
+            : 1;
+        const gap = 12.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: width,
+                child: AdminSurface(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: item.$4.withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(item.$1, color: item.$4, size: 21),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.$3,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              item.$2,
+                              style: const TextStyle(
+                                color: _muted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PlanCard extends StatefulWidget {
   const _PlanCard({
     required this.plan,
+    required this.position,
     required this.onEdit,
     required this.onDeactivate,
   });
 
   final AdminSubscriptionPlan plan;
+  final int position;
   final VoidCallback onEdit;
   final VoidCallback? onDeactivate;
 
   @override
+  State<_PlanCard> createState() => _PlanCardState();
+}
+
+class _PlanCardState extends State<_PlanCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final plan = widget.plan;
     final statusColor = plan.isActive ? _active : _muted;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: _line),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final details = Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(12),
+    final perDay = plan.durationDays > 0 ? plan.price / plan.durationDays : 0.0;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        key: ValueKey('subscription-plan-${plan.id}'),
+        duration: const Duration(milliseconds: 180),
+        transform: Matrix4.translationValues(0, _hovered ? -5 : 0, 0),
+        height: 350,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _hovered ? const Color(0xFF211416) : _card,
+              AdminWorkspaceColors.surfaceRaised,
+            ],
+          ),
+          border: Border.all(color: _hovered ? AppColors.red : _line),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.red.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.card_membership_rounded,
+                    color: AppColors.red,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.card_membership_rounded,
-                  color: AppColors.red,
+                const Spacer(),
+                _StatusBadge(
+                  label: plan.isActive ? 'ACTIVE' : 'INACTIVE',
+                  color: statusColor,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  widget.position.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    color: AdminWorkspaceColors.borderStrong,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _display(plan.name),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _text,
+                fontSize: 22,
+                height: 1.05,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              '${plan.durationDays} days membership',
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              _currency(plan.price),
+              style: const TextStyle(
+                color: _text,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              '${_currency(perDay)} per day',
+              style: const TextStyle(color: _muted, fontSize: 11),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+              decoration: BoxDecoration(
+                color: AdminWorkspaceColors.background,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'DOC ID  ${plan.id}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _muted,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _display(plan.name),
-                      style: const TextStyle(
-                        color: _text,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 17),
+                    label: const Text('EDIT'),
+                  ),
+                ),
+                if (widget.onDeactivate != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    onPressed: widget.onDeactivate,
+                    tooltip: 'Deactivate plan',
+                    icon: const Icon(
+                      Icons.pause_circle_outline_rounded,
+                      size: 19,
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 18,
-                      runSpacing: 6,
-                      children: [
-                        Text(
-                          '${plan.durationDays} days',
-                          style: const TextStyle(color: _muted),
-                        ),
-                        Text(
-                          _currency(plan.price),
-                          style: const TextStyle(
-                            color: _text,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        _StatusBadge(
-                          label: plan.isActive ? 'ACTIVE' : 'INACTIVE',
-                          color: statusColor,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-          final actions = Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 17),
-                label: const Text('EDIT'),
-              ),
-              if (onDeactivate != null)
-                TextButton.icon(
-                  onPressed: onDeactivate,
-                  icon: const Icon(Icons.pause_circle_outline_rounded),
-                  label: const Text('DEACTIVATE'),
-                ),
-            ],
-          );
-          if (constraints.maxWidth < 620) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [details, const SizedBox(height: 16), actions],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: details),
-              const SizedBox(width: 16),
-              actions,
-            ],
-          );
-        },
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

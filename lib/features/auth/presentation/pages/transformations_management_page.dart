@@ -81,7 +81,9 @@ class _MemberOption {
 }
 
 class TransformationsManagementPage extends StatefulWidget {
-  const TransformationsManagementPage({super.key});
+  const TransformationsManagementPage({super.key, this.transformationsStream});
+
+  final Stream<List<TransformationRecord>>? transformationsStream;
 
   @override
   State<TransformationsManagementPage> createState() =>
@@ -97,7 +99,8 @@ class _TransformationsManagementPageState
   @override
   void initState() {
     super.initState();
-    _transformationsStream = _watchTransformations();
+    _transformationsStream =
+        widget.transformationsStream ?? _watchTransformations();
   }
 
   Stream<List<TransformationRecord>> _watchTransformations() async* {
@@ -144,7 +147,10 @@ class _TransformationsManagementPageState
   }
 
   void _retry() {
-    setState(() => _transformationsStream = _watchTransformations());
+    setState(() {
+      _transformationsStream =
+          widget.transformationsStream ?? _watchTransformations();
+    });
   }
 
   Future<void> _openForm([TransformationRecord? record]) async {
@@ -216,25 +222,21 @@ class _TransformationsManagementPageState
               Expanded(
                 child: records.isEmpty
                     ? const _EmptyTransformations()
-                    : ListView.separated(
+                    : SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(18, 18, 18, 100),
-                        itemCount: records.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final record = records[index];
-                          return Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 1100),
-                              child: _TransformationCard(
-                                record: record,
-                                onEdit: () => _openForm(record),
-                                onUnpublish: record.isPublished
-                                    ? () => _unpublish(record)
-                                    : null,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1280),
+                            child: _TransformationsTable(
+                              key: ValueKey(
+                                'transformations-table-${records.map((record) => record.id).join('-')}',
                               ),
+                              records: records,
+                              onEdit: _openForm,
+                              onUnpublish: _unpublish,
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
               ),
             ],
@@ -307,162 +309,403 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-class _TransformationCard extends StatelessWidget {
-  const _TransformationCard({
-    required this.record,
+class _TransformationsTable extends StatefulWidget {
+  const _TransformationsTable({
+    super.key,
+    required this.records,
     required this.onEdit,
     required this.onUnpublish,
   });
 
-  final TransformationRecord record;
-  final VoidCallback onEdit;
-  final VoidCallback? onUnpublish;
+  final List<TransformationRecord> records;
+  final ValueChanged<TransformationRecord> onEdit;
+  final ValueChanged<TransformationRecord> onUnpublish;
+
+  @override
+  State<_TransformationsTable> createState() => _TransformationsTableState();
+}
+
+class _TransformationsTableState extends State<_TransformationsTable> {
+  static const _availableRowsPerPage = [5, 10, 20];
+
+  int _rowsPerPage = 10;
+  int? _sortColumnIndex = 5;
+  bool _sortAscending = true;
+  late List<TransformationRecord> _records;
+
+  @override
+  void initState() {
+    super.initState();
+    _records = List.of(widget.records);
+    _applySort();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TransformationsTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.records != widget.records) {
+      _records = List.of(widget.records);
+      _applySort();
+    }
+  }
+
+  void _applySort() {
+    if (_sortColumnIndex == 0) {
+      _records.sort((a, b) {
+        final result = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        return _sortAscending ? result : -result;
+      });
+      return;
+    }
+    if (_sortColumnIndex == 5) {
+      _records.sort((a, b) {
+        final result = a.displayOrder.compareTo(b.displayOrder);
+        if (result != 0) return _sortAscending ? result : -result;
+        final aCreated = a.createdAt?.millisecondsSinceEpoch ?? -1;
+        final bCreated = b.createdAt?.millisecondsSinceEpoch ?? -1;
+        return bCreated.compareTo(aCreated);
+      });
+    }
+  }
+
+  void _sortBy(int columnIndex) {
+    setState(() {
+      if (_sortColumnIndex == columnIndex) {
+        _sortAscending = !_sortAscending;
+      } else {
+        _sortColumnIndex = columnIndex;
+        _sortAscending = true;
+      }
+      _applySort();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = record.isPublished ? _published : _muted;
-    final details = [
-      ('Member Code', record.memberCode),
-      ('Name', record.name),
-      ('Before Weight', _measurement(record.weightBeforeKg, 'kg')),
-      ('After Weight', _measurement(record.weightAfterKg, 'kg')),
-      ('Height', _measurement(record.heightCm, 'cm')),
-      ('Duration', record.durationText),
-      ('Display Order', record.displayOrder.toString()),
-    ];
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: _line),
+    return Card(
+      margin: EdgeInsets.zero,
+      color: _card,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _line),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: DataTableTheme(
+        data: const DataTableThemeData(
+          headingTextStyle: TextStyle(
+            color: _muted,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
+          ),
+          dataTextStyle: TextStyle(
+            color: _text,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        child: PaginatedDataTable(
+          key: const Key('admin-transformations-table'),
+          header: Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _display(record.title),
-                      style: const TextStyle(
-                        color: _text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (record.description.isNotEmpty) ...[
-                      const SizedBox(height: 7),
-                      Text(
-                        record.description,
-                        style: const TextStyle(color: _muted, height: 1.45),
-                      ),
-                    ],
-                  ],
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.insights_outlined,
+                  color: AppColors.red,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+              const SizedBox(width: 11),
+              const Expanded(
                 child: Text(
-                  record.isPublished ? 'PUBLISHED' : 'UNPUBLISHED',
+                  'Transformation records',
                   style: TextStyle(
-                    color: statusColor,
-                    fontSize: 9,
+                    color: _text,
+                    fontSize: 15,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: _line),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 850
-                  ? 4
-                  : constraints.maxWidth >= 520
-                  ? 2
-                  : 1;
-              const gap = 14.0;
-              final width =
-                  (constraints.maxWidth - gap * (columns - 1)) / columns;
-              return Wrap(
-                spacing: gap,
-                runSpacing: 14,
-                children: [
-                  for (final detail in details)
-                    SizedBox(
-                      width: width,
-                      child: _Detail(label: detail.$1, value: detail.$2),
-                    ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 17),
-                label: const Text('EDIT'),
-              ),
-              if (onUnpublish != null)
-                TextButton.icon(
-                  onPressed: onUnpublish,
-                  icon: const Icon(Icons.visibility_off_outlined, size: 17),
-                  label: const Text('UNPUBLISH'),
+              Text(
+                '${widget.records.length} records',
+                style: const TextStyle(
+                  color: _muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
+              ),
             ],
           ),
-        ],
+          headingRowColor: const WidgetStatePropertyAll(_background),
+          horizontalMargin: 18,
+          columnSpacing: 26,
+          dataRowMinHeight: 78,
+          dataRowMaxHeight: 86,
+          dividerThickness: 0.7,
+          showCheckboxColumn: false,
+          showFirstLastButtons: true,
+          showEmptyRows: false,
+          rowsPerPage: _rowsPerPage,
+          availableRowsPerPage: _availableRowsPerPage,
+          onRowsPerPageChanged: (value) {
+            if (value == null) return;
+            setState(() => _rowsPerPage = value);
+          },
+          sortColumnIndex: _sortColumnIndex,
+          sortAscending: _sortAscending,
+          source: _TransformationsDataSource(
+            records: _records,
+            onEdit: widget.onEdit,
+            onUnpublish: widget.onUnpublish,
+          ),
+          columns: [
+            DataColumn(
+              label: const Text('MEMBER'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('STORY')),
+            const DataColumn(label: Text('PROGRESS')),
+            const DataColumn(label: Text('DETAILS')),
+            const DataColumn(label: Text('STATUS')),
+            DataColumn(
+              numeric: true,
+              label: const Text('ORDER'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('ACTIONS')),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _Detail extends StatelessWidget {
-  const _Detail({required this.label, required this.value});
+class _TransformationsDataSource extends DataTableSource {
+  _TransformationsDataSource({
+    required this.records,
+    required this.onEdit,
+    required this.onUnpublish,
+  });
+
+  final List<TransformationRecord> records;
+  final ValueChanged<TransformationRecord> onEdit;
+  final ValueChanged<TransformationRecord> onUnpublish;
+
+  @override
+  DataRow? getRow(int index) {
+    if (index >= records.length) return null;
+    final record = records[index];
+    final change = record.weightBeforeKg != null && record.weightAfterKg != null
+        ? record.weightAfterKg! - record.weightBeforeKg!
+        : null;
+    return DataRow(
+      key: ValueKey('transformation-${record.id}'),
+      cells: [
+        DataCell(
+          SizedBox(
+            width: 135,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _display(record.name),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _display(record.memberCode),
+                  style: const TextStyle(color: AppColors.red, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 220,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _display(record.title),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _display(record.description),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontSize: 10,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 145,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProgressLine(
+                  label: 'BEFORE',
+                  value: _measurement(record.weightBeforeKg, 'kg'),
+                ),
+                const SizedBox(height: 5),
+                _ProgressLine(
+                  label: 'AFTER',
+                  value: _measurement(record.weightAfterKg, 'kg'),
+                  color: _published,
+                ),
+                if (change != null) ...[
+                  const SizedBox(height: 5),
+                  _ProgressLine(
+                    label: 'CHANGE',
+                    value:
+                        '${change > 0 ? '+' : ''}${_plainNullable(change)} kg',
+                    color: AppColors.red,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 145,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProgressLine(
+                  label: 'HEIGHT',
+                  value: _measurement(record.heightCm, 'cm'),
+                ),
+                const SizedBox(height: 6),
+                _ProgressLine(
+                  label: 'DURATION',
+                  value: _display(record.durationText),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(_PublishedBadge(isPublished: record.isPublished)),
+        DataCell(
+          Text(
+            record.displayOrder.toString(),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => onEdit(record),
+                tooltip: 'Edit transformation',
+                icon: const Icon(Icons.edit_outlined, size: 19),
+              ),
+              if (record.isPublished)
+                IconButton(
+                  onPressed: () => onUnpublish(record),
+                  tooltip: 'Unpublish transformation',
+                  icon: const Icon(Icons.visibility_off_outlined, size: 19),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => records.length;
+
+  @override
+  int get selectedRowCount => 0;
+}
+
+class _ProgressLine extends StatelessWidget {
+  const _ProgressLine({
+    required this.label,
+    required this.value,
+    this.color = _text,
+  });
 
   final String label;
   final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.7,
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label  ',
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+            ),
           ),
+          TextSpan(
+            text: value,
+            style: TextStyle(color: color),
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _PublishedBadge extends StatelessWidget {
+  const _PublishedBadge({required this.isPublished});
+
+  final bool isPublished;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPublished ? _published : _muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        isPublished ? 'PUBLISHED' : 'UNPUBLISHED',
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
         ),
-        const SizedBox(height: 4),
-        Text(
-          _display(value),
-          style: const TextStyle(color: _text, fontWeight: FontWeight.w700),
-        ),
-      ],
+      ),
     );
   }
 }
