@@ -12,6 +12,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true;
     }
 
+    function isCurrentMemberPayment() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/userCredentials/$(request.auth.uid)).data.memberId == resource.data.memberId;
+    }
+
     match /userCredentials/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow update: if isSignedIn() && request.auth.uid == uid;
@@ -35,22 +40,25 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      allow read: if isActiveAdmin();
+      allow read: if isActiveAdmin() || isCurrentMemberPayment();
       allow create: if isActiveAdmin()
         && request.resource.data.collectedBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId)).data.createdBy == request.auth.uid;
     }
 
     match /subscriptions/{planId} {
-      allow read: if true;
+      allow read: if resource.data.isActive == true || isActiveAdmin();
+      allow create, update: if isActiveAdmin();
     }
 
     match /settings/{id} {
-      allow read: if true;
+      allow read: if id == "gymProfile";
+      allow create, update: if id == "gymProfile" && isActiveAdmin();
     }
 
     match /transformations/{id} {
       allow read: if resource.data.isPublished == true || isActiveAdmin();
+      allow create, update: if isActiveAdmin();
     }
   }
 }

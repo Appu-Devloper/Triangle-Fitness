@@ -6,8 +6,11 @@ import 'package:triangle_fitness/core/theme/app_colors.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/admin_login_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/member_login_page.dart';
 import 'package:triangle_fitness/features/home/domain/entities/equipment.dart';
+import 'package:triangle_fitness/features/home/domain/entities/gym_profile.dart';
 import 'package:triangle_fitness/features/home/domain/entities/home_action.dart';
 import 'package:triangle_fitness/features/home/domain/entities/program.dart';
+import 'package:triangle_fitness/features/home/domain/entities/public_subscription_plan.dart';
+import 'package:triangle_fitness/features/home/domain/entities/public_transformation.dart';
 import 'package:triangle_fitness/features/home/presentation/bloc/home_bloc.dart';
 
 const _ink = AppColors.ink;
@@ -182,6 +185,7 @@ class _HomePageState extends State<HomePage> {
                         KeyedSubtree(
                           key: _homeKey,
                           child: HeroSection(
+                            gymName: content.profile.gymName,
                             onCall: () => _open(ExternalAction.call),
                             onDirections: () =>
                                 _open(ExternalAction.directions),
@@ -191,6 +195,12 @@ class _HomePageState extends State<HomePage> {
                         KeyedSubtree(
                           key: _programsKey,
                           child: ProgramsSection(programs: content.programs),
+                        ),
+                        SubscriptionPlansSection(
+                          plans: content.subscriptionPlans,
+                        ),
+                        TransformationsSection(
+                          transformations: content.transformations,
                         ),
                         KeyedSubtree(
                           key: _equipmentKey,
@@ -203,6 +213,7 @@ class _HomePageState extends State<HomePage> {
                         KeyedSubtree(
                           key: _locationKey,
                           child: LocationSection(
+                            profile: content.profile,
                             onDirections: () =>
                                 _open(ExternalAction.directions),
                             onCall: () => _open(ExternalAction.call),
@@ -393,11 +404,13 @@ class _MobileMenu extends StatelessWidget {
 class HeroSection extends StatelessWidget {
   const HeroSection({
     super.key,
+    required this.gymName,
     required this.onCall,
     required this.onDirections,
     required this.onMemberLogin,
   });
 
+  final String gymName;
   final VoidCallback onCall;
   final VoidCallback onDirections;
   final VoidCallback onMemberLogin;
@@ -418,6 +431,7 @@ class HeroSection extends StatelessWidget {
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 900;
             final copy = _HeroCopy(
+              gymName: gymName,
               onCall: onCall,
               onDirections: onDirections,
               onMemberLogin: onMemberLogin,
@@ -444,11 +458,13 @@ class HeroSection extends StatelessWidget {
 
 class _HeroCopy extends StatelessWidget {
   const _HeroCopy({
+    required this.gymName,
     required this.onCall,
     required this.onDirections,
     required this.onMemberLogin,
   });
 
+  final String gymName;
   final VoidCallback onCall;
   final VoidCallback onDirections;
   final VoidCallback onMemberLogin;
@@ -460,7 +476,11 @@ class _HeroCopy extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Eyebrow(text: 'KRS ROAD  /  KRISHNARAJASAGARA'),
+        Eyebrow(
+          text: gymName.isEmpty
+              ? 'KRS ROAD  /  KRISHNARAJASAGARA'
+              : gymName.toUpperCase(),
+        ),
         const SizedBox(height: 20),
         Text.rich(
           TextSpan(
@@ -870,6 +890,295 @@ extension on ProgramType {
     ProgramType.aquatics => Icons.pool_rounded,
     ProgramType.adultSports => Icons.sports_handball_rounded,
   };
+}
+
+class SubscriptionPlansSection extends StatelessWidget {
+  const SubscriptionPlansSection({super.key, required this.plans});
+
+  final List<PublicSubscriptionPlan> plans;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: _ink,
+      child: SectionShell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeading(
+              eyebrow: 'MEMBERSHIP OPTIONS',
+              title: 'SUBSCRIPTION PLANS',
+              description:
+                  'Choose a plan that matches your training schedule and goals.',
+            ),
+            const SizedBox(height: 36),
+            if (plans.isEmpty)
+              const _PublicEmptyState(
+                icon: Icons.card_membership_outlined,
+                message: 'No plans available',
+              )
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 1000
+                      ? 4
+                      : constraints.maxWidth >= 650
+                      ? 2
+                      : 1;
+                  const gap = 16.0;
+                  final width =
+                      (constraints.maxWidth - gap * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final plan in plans)
+                        SizedBox(
+                          width: width,
+                          child: _PublicPlanCard(plan: plan),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PublicPlanCard extends StatelessWidget {
+  const _PublicPlanCard({required this.plan});
+
+  final PublicSubscriptionPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: const Color(0xFF2A2D30)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.workspace_premium_outlined, color: _red, size: 30),
+          const SizedBox(height: 20),
+          Text(
+            plan.name.isEmpty ? 'Subscription Plan' : plan.name,
+            style: const TextStyle(
+              color: _paper,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            '${plan.durationDays} days',
+            style: const TextStyle(color: _muted, fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            '₹${_publicNumber(plan.price)}',
+            style: const TextStyle(
+              color: _paper,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TransformationsSection extends StatelessWidget {
+  const TransformationsSection({super.key, required this.transformations});
+
+  final List<PublicTransformation> transformations;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0D0F11),
+        border: Border.symmetric(
+          horizontal: BorderSide(color: Color(0xFF222529)),
+        ),
+      ),
+      child: SectionShell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeading(
+              eyebrow: 'REAL MEMBER PROGRESS',
+              title: 'TRANSFORMATIONS',
+              description:
+                  'Results built through consistent training and commitment.',
+            ),
+            const SizedBox(height: 36),
+            if (transformations.isEmpty)
+              const _PublicEmptyState(
+                icon: Icons.insights_outlined,
+                message: 'No transformations available',
+              )
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 900 ? 3 : 1;
+                  const gap = 16.0;
+                  final width =
+                      (constraints.maxWidth - gap * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final item in transformations)
+                        SizedBox(
+                          width: width,
+                          child: _PublicTransformationCard(item: item),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PublicTransformationCard extends StatelessWidget {
+  const _PublicTransformationCard({required this.item});
+
+  final PublicTransformation item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: const Color(0xFF2A2D30)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.name.toUpperCase(),
+            style: const TextStyle(
+              color: _red,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            item.title,
+            style: const TextStyle(
+              color: _paper,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (item.description.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              item.description,
+              style: const TextStyle(color: _muted, height: 1.55),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 18,
+            runSpacing: 10,
+            children: [
+              if (item.weightBeforeKg != null)
+                _TransformationMetric(
+                  label: 'BEFORE',
+                  value: '${_publicNumber(item.weightBeforeKg!)} kg',
+                ),
+              if (item.weightAfterKg != null)
+                _TransformationMetric(
+                  label: 'AFTER',
+                  value: '${_publicNumber(item.weightAfterKg!)} kg',
+                ),
+              if (item.durationText.isNotEmpty)
+                _TransformationMetric(
+                  label: 'DURATION',
+                  value: item.durationText,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransformationMetric extends StatelessWidget {
+  const _TransformationMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: _muted,
+            fontSize: 8,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(color: _paper, fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
+}
+
+class _PublicEmptyState extends StatelessWidget {
+  const _PublicEmptyState({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 42),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: const Color(0xFF2A2D30)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: _muted, size: 42),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: const TextStyle(color: _paper, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class EquipmentSection extends StatelessWidget {
@@ -1291,11 +1600,13 @@ class _Reason extends StatelessWidget {
 class LocationSection extends StatelessWidget {
   const LocationSection({
     super.key,
+    required this.profile,
     required this.onDirections,
     required this.onCall,
     required this.onWhatsApp,
   });
 
+  final GymProfile profile;
   final VoidCallback onDirections;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
@@ -1309,23 +1620,28 @@ class LocationSection extends StatelessWidget {
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 860;
             final info = _LocationInfo(
+              profile: profile,
               onDirections: onDirections,
               onCall: onCall,
               onWhatsApp: onWhatsApp,
             );
-            const visual = _LocationVisual();
-            return wide
-                ? Row(
-                    children: [
-                      Expanded(child: info),
-                      const SizedBox(width: 56),
-                      const Expanded(child: visual),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [info, const SizedBox(height: 40), visual],
-                  );
+            final visual = _LocationVisual(gymName: profile.gymName);
+            return ConstrainedBox(
+              constraints: BoxConstraints(minHeight: wide ? 650 : 0),
+              child: wide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: info),
+                        const SizedBox(width: 56),
+                        Expanded(child: visual),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [info, const SizedBox(height: 40), visual],
+                    ),
+            );
           },
         ),
       ),
@@ -1335,11 +1651,13 @@ class LocationSection extends StatelessWidget {
 
 class _LocationInfo extends StatelessWidget {
   const _LocationInfo({
+    required this.profile,
     required this.onDirections,
     required this.onCall,
     required this.onWhatsApp,
   });
 
+  final GymProfile profile;
   final VoidCallback onDirections;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
@@ -1355,18 +1673,71 @@ class _LocationInfo extends StatelessWidget {
           darkText: true,
         ),
         const SizedBox(height: 34),
-        const _ContactLine(
-          icon: Icons.location_on_outlined,
-          title: 'TRIANGLE FITNESS, KRS SERVICES',
-          text:
-              'Railway, KRS Rd, Hongahalli,\nKrishnarajasagara, Karnataka 571607',
-        ),
-        const SizedBox(height: 22),
-        const _ContactLine(
-          icon: Icons.person_outline_rounded,
-          title: 'NANDHI',
-          text: '+91 70199 97208',
-        ),
+        if (profile.gymName.isNotEmpty || profile.address.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.location_on_outlined,
+            title: profile.gymName.isEmpty
+                ? 'ADDRESS'
+                : profile.gymName.toUpperCase(),
+            text: profile.address,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.ownerName.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.person_outline_rounded,
+            title: 'OWNER',
+            text: profile.ownerName,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.phone.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.call_outlined,
+            title: 'PHONE',
+            text: profile.phone,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.email.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.email_outlined,
+            title: 'EMAIL',
+            text: profile.email,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.openingTime.isNotEmpty ||
+            profile.closingTime.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.schedule_outlined,
+            title: 'OPENING HOURS',
+            text: _openingHours(profile),
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.whatsappNumber.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.chat_bubble_outline_rounded,
+            title: 'WHATSAPP',
+            text: profile.whatsappNumber,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.instagramUrl.isNotEmpty) ...[
+          _ContactLine(
+            icon: Icons.camera_alt_outlined,
+            title: 'INSTAGRAM',
+            text: profile.instagramUrl,
+          ),
+          const SizedBox(height: 22),
+        ],
+        if (profile.facebookUrl.isNotEmpty)
+          _ContactLine(
+            icon: Icons.public_outlined,
+            title: 'FACEBOOK',
+            text: profile.facebookUrl,
+          ),
         const SizedBox(height: 34),
         Wrap(
           spacing: 12,
@@ -1453,7 +1824,9 @@ class _ContactLine extends StatelessWidget {
 }
 
 class _LocationVisual extends StatelessWidget {
-  const _LocationVisual();
+  const _LocationVisual({required this.gymName});
+
+  final String gymName;
 
   @override
   Widget build(BuildContext context) {
@@ -1467,22 +1840,25 @@ class _LocationVisual extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(child: CustomPaint(painter: _MapPatternPainter())),
-            const Center(
+            Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.location_on, color: _red, size: 64),
                   SizedBox(height: 8),
                   Text(
-                    'TRIANGLE FITNESS',
-                    style: TextStyle(
+                    gymName.isEmpty
+                        ? 'TRIANGLE FITNESS'
+                        : gymName.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
+                  const SizedBox(height: 4),
+                  const Text(
                     'KRS ROAD • HONGAHALLI',
                     style: TextStyle(
                       color: _muted,
@@ -1717,3 +2093,13 @@ class _Description extends StatelessWidget {
     );
   }
 }
+
+String _openingHours(GymProfile profile) {
+  if (profile.openingTime.isEmpty) return profile.closingTime;
+  if (profile.closingTime.isEmpty) return profile.openingTime;
+  return '${profile.openingTime} - ${profile.closingTime}';
+}
+
+String _publicNumber(double value) => value == value.roundToDouble()
+    ? value.toStringAsFixed(0)
+    : value.toStringAsFixed(2);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_dashboard.dart';
+import 'package:triangle_fitness/features/auth/domain/entities/member_payment.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/auth_repository.dart';
 import 'package:triangle_fitness/features/auth/presentation/cubit/member_dashboard_cubit.dart';
 
@@ -176,6 +177,8 @@ class _DashboardContent extends StatelessWidget {
                     );
                   },
                 ),
+                const SizedBox(height: 18),
+                _PaymentHistory(payments: dashboard.payments),
               ],
             ),
           ),
@@ -777,6 +780,165 @@ class _SubscriptionCard extends StatelessWidget {
   }
 }
 
+class _PaymentHistory extends StatelessWidget {
+  const _PaymentHistory({required this.payments});
+
+  final List<MemberPayment> payments;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      icon: Icons.receipt_long_outlined,
+      eyebrow: 'PAYMENTS',
+      title: 'Payment history',
+      child: payments.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 22),
+              child: Center(
+                child: Text(
+                  'No payment records found',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ),
+            )
+          : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: payments.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                return _MemberPaymentCard(payment: payments[index]);
+              },
+            ),
+    );
+  }
+}
+
+class _MemberPaymentCard extends StatelessWidget {
+  const _MemberPaymentCard({required this.payment});
+
+  final MemberPayment payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = payment.paymentStatus.trim().toUpperCase() == 'PAID';
+    final statusColor = paid
+        ? const Color(0xFF62D58D)
+        : const Color(0xFFFFC66D);
+    final details = [
+      ('Receipt No', payment.receiptNo),
+      ('Amount', _formatCurrency(payment.amount)),
+      ('Payment Mode', payment.paymentMode),
+      ('Payment Date', _formatDate(payment.paymentDate)),
+      ('Subscription Start Date', _formatDate(payment.subscriptionStartDate)),
+      ('Subscription End Date', _formatDate(payment.subscriptionEndDate)),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D0F11),
+        border: Border.all(color: const Color(0xFF292C2F)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  payment.receiptNo,
+                  style: const TextStyle(
+                    color: AppColors.paper,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  payment.paymentStatus,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 760
+                  ? 3
+                  : constraints.maxWidth >= 480
+                  ? 2
+                  : 1;
+              const gap = 14.0;
+              final width =
+                  (constraints.maxWidth - gap * (columns - 1)) / columns;
+              return Wrap(
+                spacing: gap,
+                runSpacing: 14,
+                children: [
+                  for (final detail in details)
+                    SizedBox(
+                      width: width,
+                      child: _PaymentDetail(label: detail.$1, value: detail.$2),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentDetail extends StatelessWidget {
+  const _PaymentDetail({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 8,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.paper,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.icon,
@@ -1145,4 +1307,11 @@ String _formatDate(DateTime? date) {
   ];
   final day = date.day.toString().padLeft(2, '0');
   return '$day ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatCurrency(double amount) {
+  final value = amount == amount.roundToDouble()
+      ? amount.toStringAsFixed(0)
+      : amount.toStringAsFixed(2);
+  return 'Rs. $value';
 }

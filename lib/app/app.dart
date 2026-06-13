@@ -19,7 +19,9 @@ class TriangleFitnessApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gymRepository = GymRepositoryImpl();
+    final gymRepository = GymRepositoryImpl(
+      initializer: FirebaseInitializer.instance,
+    );
     final externalLinkRepository = ExternalLinkRepositoryImpl(
       launcher: UrlLauncherService(),
     );

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:triangle_fitness/core/theme/app_theme.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/admin_dashboard.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_dashboard.dart';
+import 'package:triangle_fitness/features/auth/domain/entities/member_payment.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_session.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/auth_repository.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/member_dashboard_page.dart';
@@ -79,12 +80,37 @@ void main() {
     expect(find.text('Member profile not found'), findsOneWidget);
     expect(find.text('TRY AGAIN'), findsOneWidget);
   });
+
+  testWidgets('shows member payment history', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      RepositoryProvider<AuthRepository>.value(
+        value: _PageRepository(includePayment: true),
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const MemberDashboardPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payment history'), findsOneWidget);
+    expect(find.text('REC-PAY-1'), findsNWidgets(2));
+    expect(find.text('Rs. 2500'), findsOneWidget);
+    expect(find.text('UPI'), findsOneWidget);
+    expect(find.text('PENDING'), findsOneWidget);
+    expect(find.text('SUBSCRIPTION START DATE'), findsOneWidget);
+    expect(find.text('SUBSCRIPTION END DATE'), findsOneWidget);
+  });
 }
 
 class _PageRepository implements AuthRepository {
-  _PageRepository({this.loadFailure});
+  _PageRepository({this.loadFailure, this.includePayment = false});
 
   final AuthFailure? loadFailure;
+  final bool includePayment;
 
   @override
   Future<MemberDashboard> getCurrentMemberDashboard() async {
@@ -107,6 +133,20 @@ class _PageRepository implements AuthRepository {
       subscriptionStatus: 'Active',
       startDate: now.subtract(const Duration(days: 30)),
       endDate: now.add(const Duration(days: 30)),
+      payments: includePayment
+          ? [
+              MemberPayment(
+                id: 'payment-1',
+                receiptNo: 'REC-PAY-1',
+                amount: 2500,
+                paymentMode: 'UPI',
+                paymentStatus: 'PENDING',
+                paymentDate: now,
+                subscriptionStartDate: now.subtract(const Duration(days: 30)),
+                subscriptionEndDate: now.add(const Duration(days: 30)),
+              ),
+            ]
+          : const [],
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:triangle_fitness/features/auth/domain/entities/member_payment.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/membership_expiry.dart';
 
 class MemberDashboard extends Equatable {
@@ -19,6 +20,7 @@ class MemberDashboard extends Equatable {
     required this.subscriptionStatus,
     required this.startDate,
     required this.endDate,
+    this.payments = const [],
   });
 
   final String memberId;
@@ -37,6 +39,7 @@ class MemberDashboard extends Equatable {
   final String subscriptionStatus;
   final DateTime? startDate;
   final DateTime? endDate;
+  final List<MemberPayment> payments;
 
   String subscriptionStatusFor(DateTime now) {
     final expiry = endDate;
@@ -73,5 +76,6 @@ class MemberDashboard extends Equatable {
     subscriptionStatus,
     startDate,
     endDate,
+    payments,
   ];
 }

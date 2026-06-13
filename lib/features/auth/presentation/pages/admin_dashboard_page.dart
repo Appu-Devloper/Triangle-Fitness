@@ -6,6 +6,10 @@ import 'package:triangle_fitness/features/auth/domain/repositories/auth_reposito
 import 'package:triangle_fitness/features/auth/presentation/cubit/admin_dashboard_cubit.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/add_member_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/members_list_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/payments_list_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/settings_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/subscriptions_management_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/transformations_management_page.dart';
 
 const _workspace = Color(0xFFF4F5F7);
 const _card = Colors.white;
@@ -1248,6 +1252,34 @@ Future<void> _openSection(BuildContext context, String title) async {
     if (!context.mounted || result == null) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
     await context.read<AdminDashboardCubit>().load();
+    return;
+  }
+  if (title == 'Payments') {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const PaymentsListPage()));
+    return;
+  }
+  if (title == 'Subscriptions') {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const SubscriptionsManagementPage(),
+      ),
+    );
+    return;
+  }
+  if (title == 'Transformations') {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const TransformationsManagementPage(),
+      ),
+    );
+    return;
+  }
+  if (title == 'Settings') {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage()));
     return;
   }
   await Navigator.of(context).push(

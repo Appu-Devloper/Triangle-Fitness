@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:triangle_fitness/core/services/firebase_initializer.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/admin_dashboard.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_dashboard.dart';
+import 'package:triangle_fitness/features/auth/domain/entities/member_payment.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_session.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/auth_repository.dart';
 
@@ -209,6 +210,37 @@ class FirebaseAuthRepository implements AuthRepository {
         throw const AuthFailure('Member profile not found');
       }
 
+      final paymentsSnapshot = await _firestore
+          .collection('payments')
+          .where('memberId', isEqualTo: memberId)
+          .get();
+      final payments =
+          paymentsSnapshot.docs.map((document) {
+            final payment = document.data();
+            return MemberPayment(
+              id: document.id,
+              receiptNo: _displayValue(payment['receiptNo']),
+              amount: _numberValue(
+                payment['amount'] ??
+                    payment['paymentAmount'] ??
+                    payment['paidAmount'],
+              ),
+              paymentMode: _displayValue(payment['paymentMode']),
+              paymentStatus: _displayValue(payment['paymentStatus']),
+              paymentDate: _dateValue(payment['paymentDate']),
+              subscriptionStartDate: _dateValue(
+                payment['subscriptionStartDate'],
+              ),
+              subscriptionEndDate: _dateValue(payment['subscriptionEndDate']),
+            );
+          }).toList()..sort((a, b) {
+            final aDate =
+                a.paymentDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bDate =
+                b.paymentDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bDate.compareTo(aDate);
+          });
+
       final subscription = _mapValue(member['subscription']);
       return MemberDashboard(
         memberId: memberId,
@@ -241,6 +273,7 @@ class FirebaseAuthRepository implements AuthRepository {
         ),
         startDate: _dateValue(subscription['startDate']),
         endDate: _dateValue(subscription['endDate']),
+        payments: payments,
       );
     } on AuthFailure {
       rethrow;
