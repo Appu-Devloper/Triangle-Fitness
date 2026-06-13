@@ -23,33 +23,22 @@ void main() {
     _expectSummary('Pending Amount', 'Rs. 1000');
     _expectSummary('Total Payments Count', '2');
 
-    final firstPayment = find.byKey(const ValueKey('payment-one'));
+    final paymentsTable = find.byKey(const Key('admin-payments-table'));
+    expect(find.byType(PaginatedDataTable), findsOneWidget);
+    expect(paymentsTable, findsOneWidget);
+    expect(find.text('REC-1001'), findsOneWidget);
+    expect(find.text('TF001'), findsOneWidget);
+    expect(find.text('Arun Rao'), findsOneWidget);
+    expect(find.text('9876543210'), findsOneWidget);
     expect(
-      find.descendant(of: firstPayment, matching: find.text('REC-1001')),
+      find.descendant(of: paymentsTable, matching: find.text('UPI')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: firstPayment, matching: find.text('TF001')),
+      find.descendant(of: paymentsTable, matching: find.text('PAID')),
       findsOneWidget,
     );
-    expect(
-      find.descendant(of: firstPayment, matching: find.text('Arun Rao')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: firstPayment, matching: find.text('9876543210')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: firstPayment, matching: find.text('UPI')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: firstPayment, matching: find.text('PAID')),
-      findsOneWidget,
-    );
-    expect(find.text('SUBSCRIPTION START DATE'), findsNWidgets(2));
-    expect(find.text('SUBSCRIPTION END DATE'), findsNWidgets(2));
+    expect(find.text('SUBSCRIPTION PERIOD'), findsOneWidget);
   });
 
   testWidgets('searches locally across requested payment fields', (
@@ -126,7 +115,7 @@ void main() {
     expect(find.text('TRY AGAIN'), findsOneWidget);
   });
 
-  testWidgets('renders payment cards without overflow on mobile', (
+  testWidgets('renders the payment table without overflow on mobile', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -135,6 +124,23 @@ void main() {
 
     expect(find.text('REC-1001'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('paginates the filtered payment records locally', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpPage(tester, Stream.value(_manyPayments()));
+
+    expect(find.text('Member 0'), findsOneWidget);
+    expect(find.text('Member 11'), findsNothing);
+
+    final nextPage = find.byTooltip('Next page');
+    await tester.ensureVisible(nextPage);
+    await tester.tap(nextPage);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Member 0'), findsNothing);
+    expect(find.text('Member 11'), findsOneWidget);
   });
 }
 
@@ -182,6 +188,26 @@ List<PaymentRecord> _payments() {
       subscriptionEndDate: DateTime(now.year, now.month, 15),
     ),
   ];
+}
+
+List<PaymentRecord> _manyPayments() {
+  final now = DateTime.now();
+  return List.generate(
+    12,
+    (index) => PaymentRecord(
+      id: 'payment-$index',
+      receiptNo: 'REC-${1000 + index}',
+      memberCode: 'TF${index.toString().padLeft(3, '0')}',
+      memberName: 'Member $index',
+      phone: '90000000${index.toString().padLeft(2, '0')}',
+      amount: 1000 + index.toDouble(),
+      paymentMode: 'UPI',
+      paymentStatus: 'PAID',
+      paymentDate: now.subtract(Duration(days: index)),
+      subscriptionStartDate: now.subtract(Duration(days: index)),
+      subscriptionEndDate: now.add(Duration(days: 30 - index)),
+    ),
+  );
 }
 
 void _expectSummary(String label, String value) {

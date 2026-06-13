@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -96,16 +97,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.ink,
-      appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-      ),
+    return AdminWorkspaceScaffold(
+      section: AdminWorkspaceSection.settings,
+      title: 'Settings',
+      subtitle: 'Manage public gym identity, contact details and hours',
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.red))
           : _error != null && _controllers['gymName']!.text.isEmpty
@@ -114,14 +109,9 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 50),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 850),
-                  child: Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      border: Border.all(color: const Color(0xFF272A2D)),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                  constraints: const BoxConstraints(maxWidth: 980),
+                  child: AdminSurface(
+                    padding: const EdgeInsets.all(26),
                     child: Form(
                       key: _formKey,
                       child: Column(

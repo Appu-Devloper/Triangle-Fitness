@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _background = AppColors.ink;
-const _card = AppColors.surface;
-const _text = AppColors.paper;
-const _muted = AppColors.muted;
-const _line = Color(0xFF272A2D);
-const _active = Color(0xFF55CA82);
+const _card = AdminWorkspaceColors.surface;
+const _text = AdminWorkspaceColors.text;
+const _muted = AdminWorkspaceColors.muted;
+const _line = AdminWorkspaceColors.border;
+const _active = AdminWorkspaceColors.success;
 
 class AdminSubscriptionPlan {
   const AdminSubscriptionPlan({
@@ -108,68 +108,52 @@ class _SubscriptionsManagementPageState
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(
-        context,
-      ).copyWith(scaffoldBackgroundColor: _background, cardColor: _card),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Subscriptions',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          backgroundColor: _card,
-          foregroundColor: _text,
-          surfaceTintColor: Colors.transparent,
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          key: const Key('add-subscription-plan'),
-          onPressed: _openForm,
-          backgroundColor: AppColors.red,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_card_rounded),
-          label: const Text(
-            'ADD SUBSCRIPTION PLAN',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-        ),
-        body: StreamBuilder<List<AdminSubscriptionPlan>>(
-          stream: _plansStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return _PageError(error: snapshot.error, onRetry: _retry);
-            }
-            if (!snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.red),
-              );
-            }
-            final plans = snapshot.data!;
-            if (plans.isEmpty) {
-              return const _EmptyState();
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 100),
-              itemCount: plans.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final plan = plans[index];
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1000),
-                    child: _PlanCard(
-                      plan: plan,
-                      onEdit: () => _openForm(plan),
-                      onDeactivate: plan.isActive
-                          ? () => _deactivate(plan)
-                          : null,
-                    ),
-                  ),
-                );
-              },
+    return AdminWorkspaceScaffold(
+      section: AdminWorkspaceSection.subscriptions,
+      title: 'Subscriptions',
+      subtitle: 'Create and manage membership plans and pricing',
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('add-subscription-plan'),
+        onPressed: _openForm,
+        icon: const Icon(Icons.add_card_rounded),
+        label: const Text('ADD SUBSCRIPTION PLAN'),
+      ),
+      body: StreamBuilder<List<AdminSubscriptionPlan>>(
+        stream: _plansStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return _PageError(error: snapshot.error, onRetry: _retry);
+          }
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.red),
             );
-          },
-        ),
+          }
+          final plans = snapshot.data!;
+          if (plans.isEmpty) {
+            return const _EmptyState();
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+            itemCount: plans.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final plan = plans[index];
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: _PlanCard(
+                    plan: plan,
+                    onEdit: () => _openForm(plan),
+                    onDeactivate: plan.isActive
+                        ? () => _deactivate(plan)
+                        : null,
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

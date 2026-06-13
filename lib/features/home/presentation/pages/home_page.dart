@@ -932,10 +932,13 @@ class SubscriptionPlansSection extends StatelessWidget {
                     spacing: gap,
                     runSpacing: gap,
                     children: [
-                      for (final plan in plans)
+                      for (final entry in plans.indexed)
                         SizedBox(
                           width: width,
-                          child: _PublicPlanCard(plan: plan),
+                          child: _PublicPlanCard(
+                            plan: entry.$2,
+                            position: entry.$1 + 1,
+                          ),
                         ),
                     ],
                   );
@@ -948,48 +951,155 @@ class SubscriptionPlansSection extends StatelessWidget {
   }
 }
 
-class _PublicPlanCard extends StatelessWidget {
-  const _PublicPlanCard({required this.plan});
+class _PublicPlanCard extends StatefulWidget {
+  const _PublicPlanCard({required this.plan, required this.position});
 
   final PublicSubscriptionPlan plan;
+  final int position;
+
+  @override
+  State<_PublicPlanCard> createState() => _PublicPlanCardState();
+}
+
+class _PublicPlanCardState extends State<_PublicPlanCard> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: _surface,
-        border: Border.all(color: const Color(0xFF2A2D30)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.workspace_premium_outlined, color: _red, size: 30),
-          const SizedBox(height: 20),
-          Text(
-            plan.name.isEmpty ? 'Subscription Plan' : plan.name,
-            style: const TextStyle(
-              color: _paper,
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
+    final plan = widget.plan;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
+        height: 350,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _hovered ? const Color(0xFF211416) : const Color(0xFF171A1D),
+              _surface,
+            ],
+          ),
+          border: Border.all(color: _hovered ? _red : const Color(0xFF2A2D30)),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.34),
+                    blurRadius: 28,
+                    offset: const Offset(0, 14),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: _red.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.workspace_premium_outlined,
+                    color: _red,
+                    size: 24,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  widget.position.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    color: Color(0xFF45494E),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            '${plan.durationDays} days',
-            style: const TextStyle(color: _muted, fontSize: 13),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            '₹${_publicNumber(plan.price)}',
-            style: const TextStyle(
-              color: _paper,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+            const SizedBox(height: 26),
+            Text(
+              plan.name.isEmpty ? 'Subscription Plan' : plan.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _paper,
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+                height: 1.05,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 11),
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: _muted,
+                  size: 15,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${plan.durationDays} days',
+                  style: const TextStyle(
+                    color: _muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Text(
+              'PLAN PRICE',
+              style: TextStyle(
+                color: _muted,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              '₹${_publicNumber(plan.price)}',
+              style: const TextStyle(
+                color: _paper,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.8,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MemberLoginPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                label: const Text('CHOOSE PLAN'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _paper,
+                  side: BorderSide(
+                    color: _hovered ? _red : const Color(0xFF3B3F44),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1052,102 +1162,221 @@ class TransformationsSection extends StatelessWidget {
   }
 }
 
-class _PublicTransformationCard extends StatelessWidget {
+class _PublicTransformationCard extends StatefulWidget {
   const _PublicTransformationCard({required this.item});
 
   final PublicTransformation item;
 
   @override
+  State<_PublicTransformationCard> createState() =>
+      _PublicTransformationCardState();
+}
+
+class _PublicTransformationCardState extends State<_PublicTransformationCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: _surface,
-        border: Border.all(color: const Color(0xFF2A2D30)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            item.name.toUpperCase(),
-            style: const TextStyle(
-              color: _red,
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.3,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            item.title,
-            style: const TextStyle(
-              color: _paper,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (item.description.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              item.description,
-              style: const TextStyle(color: _muted, height: 1.55),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 18,
-            runSpacing: 10,
-            children: [
-              if (item.weightBeforeKg != null)
-                _TransformationMetric(
-                  label: 'BEFORE',
-                  value: '${_publicNumber(item.weightBeforeKg!)} kg',
+    final item = widget.item;
+    final change = item.weightBeforeKg != null && item.weightAfterKg != null
+        ? item.weightAfterKg! - item.weightBeforeKg!
+        : null;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        transform: Matrix4.translationValues(0, _hovered ? -5 : 0, 0),
+        height: 370,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _surface,
+          border: Border.all(color: _hovered ? _red : const Color(0xFF2A2D30)),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.32),
+                    blurRadius: 26,
+                    offset: const Offset(0, 13),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _red.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.trending_up_rounded,
+                    color: _red,
+                    size: 23,
+                  ),
                 ),
-              if (item.weightAfterKg != null)
-                _TransformationMetric(
-                  label: 'AFTER',
-                  value: '${_publicNumber(item.weightAfterKg!)} kg',
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name.isEmpty
+                            ? 'MEMBER STORY'
+                            : item.name.toUpperCase(),
+                        style: const TextStyle(
+                          color: _red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        item.title.isEmpty
+                            ? 'Member transformation'
+                            : item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _paper,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          height: 1.12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              if (item.durationText.isNotEmpty)
-                _TransformationMetric(
-                  label: 'DURATION',
-                  value: item.durationText,
-                ),
+              ],
+            ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                item.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _muted, height: 1.55),
+              ),
             ],
-          ),
-        ],
+            const Spacer(),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D0F11),
+                border: Border.all(color: const Color(0xFF272A2E)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  if (item.weightBeforeKg != null)
+                    _TransformationMetric(
+                      label: 'BEFORE',
+                      value: '${_publicNumber(item.weightBeforeKg!)} kg',
+                    ),
+                  if (item.weightAfterKg != null)
+                    _TransformationMetric(
+                      label: 'AFTER',
+                      value: '${_publicNumber(item.weightAfterKg!)} kg',
+                      emphasized: true,
+                    ),
+                  if (change != null)
+                    _TransformationMetric(
+                      label: 'CHANGE',
+                      value:
+                          '${change > 0 ? '+' : ''}${_publicNumber(change)} kg',
+                    ),
+                ],
+              ),
+            ),
+            if (item.durationText.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.schedule_rounded, color: _muted, size: 15),
+                  const SizedBox(width: 7),
+                  const Text(
+                    'ACHIEVED IN',
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    item.durationText,
+                    style: const TextStyle(
+                      color: _paper,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _TransformationMetric extends StatelessWidget {
-  const _TransformationMetric({required this.label, required this.value});
+  const _TransformationMetric({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
 
   final String label;
   final String value;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
+    return Container(
+      constraints: const BoxConstraints(minWidth: 78),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: emphasized
+            ? _red.withValues(alpha: 0.12)
+            : const Color(0xFF15181B),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(color: _paper, fontWeight: FontWeight.w900),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: emphasized ? _red : _paper,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

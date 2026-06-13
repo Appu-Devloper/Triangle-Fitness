@@ -2,14 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _paymentsBackground = AppColors.ink;
-const _paymentsCard = AppColors.surface;
-const _paymentsText = AppColors.paper;
-const _paymentsMuted = AppColors.muted;
-const _paymentsLine = Color(0xFF272A2D);
-const _paidColor = Color(0xFF55CA82);
-const _pendingColor = Color(0xFFFFC66D);
+const _paymentsBackground = AdminWorkspaceColors.background;
+const _paymentsCard = AdminWorkspaceColors.surface;
+const _paymentsText = AdminWorkspaceColors.text;
+const _paymentsMuted = AdminWorkspaceColors.muted;
+const _paymentsLine = AdminWorkspaceColors.border;
+const _paidColor = AdminWorkspaceColors.success;
+const _pendingColor = AdminWorkspaceColors.warning;
 
 enum PaymentStatusFilter { all, paid, pending }
 
@@ -158,54 +159,42 @@ class _PaymentsListPageState extends State<PaymentsListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: _paymentsBackground,
-        cardColor: _paymentsCard,
-      ),
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: _paymentsCard,
-          foregroundColor: _paymentsText,
-          surfaceTintColor: Colors.transparent,
-          title: const Text(
-            'Payments',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-        ),
-        body: StreamBuilder<List<PaymentRecord>>(
-          stream: _paymentsStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return _PaymentsError(error: snapshot.error, onRetry: _retry);
-            }
-            if (!snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.red),
-              );
-            }
-
-            final payments = _visiblePayments(snapshot.data!);
-            return _PaymentsContent(
-              payments: payments,
-              statusFilter: _statusFilter,
-              modeFilter: _modeFilter,
-              dateFilter: _dateFilter,
-              onSearchChanged: (value) {
-                setState(() => _searchQuery = value);
-              },
-              onStatusChanged: (value) {
-                setState(() => _statusFilter = value);
-              },
-              onModeChanged: (value) {
-                setState(() => _modeFilter = value);
-              },
-              onDateChanged: (value) {
-                setState(() => _dateFilter = value);
-              },
+    return AdminWorkspaceScaffold(
+      section: AdminWorkspaceSection.payments,
+      title: 'Payments',
+      subtitle: 'Track collections, pending balances and payment activity',
+      body: StreamBuilder<List<PaymentRecord>>(
+        stream: _paymentsStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return _PaymentsError(error: snapshot.error, onRetry: _retry);
+          }
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.red),
             );
-          },
-        ),
+          }
+
+          final payments = _visiblePayments(snapshot.data!);
+          return _PaymentsContent(
+            payments: payments,
+            statusFilter: _statusFilter,
+            modeFilter: _modeFilter,
+            dateFilter: _dateFilter,
+            onSearchChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+            onStatusChanged: (value) {
+              setState(() => _statusFilter = value);
+            },
+            onModeChanged: (value) {
+              setState(() => _modeFilter = value);
+            },
+            onDateChanged: (value) {
+              setState(() => _dateFilter = value);
+            },
+          );
+        },
       ),
     );
   }
@@ -274,7 +263,12 @@ class _PaymentsContent extends StatelessWidget {
                 if (payments.isEmpty)
                   const _EmptyPayments()
                 else
-                  _PaymentsList(payments: payments),
+                  _PaymentsTable(
+                    key: ValueKey(
+                      'payments-table-${payments.map((item) => item.id).join('-')}',
+                    ),
+                    payments: payments,
+                  ),
               ],
             ),
           ),
@@ -568,220 +562,319 @@ class _FilterRow<T> extends StatelessWidget {
   }
 }
 
-class _PaymentsList extends StatelessWidget {
-  const _PaymentsList({required this.payments});
+class _PaymentsTable extends StatefulWidget {
+  const _PaymentsTable({super.key, required this.payments});
 
   final List<PaymentRecord> payments;
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: payments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _PaymentCard(payment: payments[index]),
-    );
-  }
+  State<_PaymentsTable> createState() => _PaymentsTableState();
 }
 
-class _PaymentCard extends StatelessWidget {
-  const _PaymentCard({required this.payment});
+class _PaymentsTableState extends State<_PaymentsTable> {
+  static const _availableRowsPerPage = [5, 10, 20];
 
-  final PaymentRecord payment;
+  int _rowsPerPage = 10;
+  int? _sortColumnIndex = 6;
+  bool _sortAscending = false;
+  late List<PaymentRecord> _sortedPayments;
+
+  @override
+  void initState() {
+    super.initState();
+    _sortedPayments = List.of(widget.payments);
+    _applySort();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PaymentsTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.payments != widget.payments) {
+      _sortedPayments = List.of(widget.payments);
+      _applySort();
+    }
+  }
+
+  void _applySort() {
+    if (_sortColumnIndex == 3) {
+      _sortedPayments.sort((a, b) {
+        final result = a.amount.compareTo(b.amount);
+        return _sortAscending ? result : -result;
+      });
+      return;
+    }
+    if (_sortColumnIndex == 6) {
+      _sortedPayments.sort((a, b) {
+        final aDate = a.paymentDate?.millisecondsSinceEpoch ?? -1;
+        final bDate = b.paymentDate?.millisecondsSinceEpoch ?? -1;
+        final result = aDate.compareTo(bDate);
+        return _sortAscending ? result : -result;
+      });
+    }
+  }
+
+  void _sortBy(int columnIndex) {
+    setState(() {
+      if (_sortColumnIndex == columnIndex) {
+        _sortAscending = !_sortAscending;
+      } else {
+        _sortColumnIndex = columnIndex;
+        _sortAscending = true;
+      }
+      _applySort();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      key: ValueKey('payment-${payment.id}'),
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: _paymentsCard,
-        border: Border.all(color: _paymentsLine),
+    return Card(
+      margin: EdgeInsets.zero,
+      color: _paymentsCard,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _paymentsLine),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+      clipBehavior: Clip.antiAlias,
+      child: DataTableTheme(
+        data: const DataTableThemeData(
+          headingTextStyle: TextStyle(
+            color: _paymentsMuted,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
+          ),
+          dataTextStyle: TextStyle(
+            color: _paymentsText,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        child: PaginatedDataTable(
+          key: const Key('admin-payments-table'),
+          header: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(11),
+                  color: AppColors.red.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.receipt_long_rounded,
+                  Icons.receipt_long_outlined,
                   color: AppColors.red,
-                  size: 22,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'RECEIPT NO',
-                      style: TextStyle(
-                        color: _paymentsMuted,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      _display(payment.receiptNo),
-                      style: const TextStyle(
-                        color: _paymentsText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Text(
+                  'Payment records',
+                  style: TextStyle(
+                    color: _paymentsText,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
               Text(
-                _formatCurrency(payment.amount),
+                '${widget.payments.length} records',
                 style: const TextStyle(
-                  color: _paymentsText,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
+                  color: _paymentsMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 15),
-          const Divider(height: 1, color: _paymentsLine),
-          const SizedBox(height: 15),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 960
-                  ? 3
-                  : constraints.maxWidth >= 560
-                  ? 2
-                  : 1;
-              const gap = 14.0;
-              final width =
-                  (constraints.maxWidth - gap * (columns - 1)) / columns;
-              final details = [
-                _PaymentDetail('Member Code', payment.memberCode),
-                _PaymentDetail('Member Name', payment.memberName),
-                _PaymentDetail('Phone', payment.phone),
-                _PaymentDetail('Amount', _formatCurrency(payment.amount)),
-                _PaymentDetail('Payment Mode', payment.paymentMode),
-                _PaymentDetail('Payment Status', payment.paymentStatus),
-                _PaymentDetail(
-                  'Payment Date',
-                  _formatDate(payment.paymentDate, includeTime: true),
-                ),
-                _PaymentDetail(
-                  'Subscription Start Date',
-                  _formatDate(payment.subscriptionStartDate),
-                ),
-                _PaymentDetail(
-                  'Subscription End Date',
-                  _formatDate(payment.subscriptionEndDate),
-                ),
-              ];
-              return Wrap(
-                spacing: gap,
-                runSpacing: 14,
-                children: [
-                  for (final detail in details)
-                    SizedBox(
-                      width: width,
-                      child: detail.label == 'Payment Status'
-                          ? _StatusDetail(payment.paymentStatus)
-                          : _DetailValue(detail: detail),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
+          headingRowColor: const WidgetStatePropertyAll(_paymentsBackground),
+          horizontalMargin: 18,
+          columnSpacing: 28,
+          dataRowMinHeight: 68,
+          dataRowMaxHeight: 76,
+          dividerThickness: 0.7,
+          showCheckboxColumn: false,
+          showFirstLastButtons: true,
+          showEmptyRows: false,
+          rowsPerPage: _rowsPerPage,
+          availableRowsPerPage: _availableRowsPerPage,
+          onRowsPerPageChanged: (value) {
+            if (value == null) return;
+            setState(() => _rowsPerPage = value);
+          },
+          sortColumnIndex: _sortColumnIndex,
+          sortAscending: _sortAscending,
+          source: _PaymentsDataSource(_sortedPayments),
+          columns: [
+            const DataColumn(label: Text('RECEIPT NO')),
+            const DataColumn(label: Text('MEMBER')),
+            const DataColumn(label: Text('PHONE')),
+            DataColumn(
+              numeric: true,
+              label: const Text('AMOUNT'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('MODE')),
+            const DataColumn(label: Text('STATUS')),
+            DataColumn(
+              label: const Text('PAYMENT DATE'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('SUBSCRIPTION PERIOD')),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _DetailValue extends StatelessWidget {
-  const _DetailValue({required this.detail});
+class _PaymentsDataSource extends DataTableSource {
+  _PaymentsDataSource(this.payments);
 
-  final _PaymentDetail detail;
+  final List<PaymentRecord> payments;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          detail.label.toUpperCase(),
-          style: const TextStyle(
-            color: _paymentsMuted,
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.7,
+  DataRow? getRow(int index) {
+    if (index >= payments.length) return null;
+    final payment = payments[index];
+    return DataRow(
+      key: ValueKey('payment-${payment.id}'),
+      cells: [
+        DataCell(
+          Text(
+            _display(payment.receiptNo),
+            style: const TextStyle(
+              color: AppColors.red,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          _display(detail.value),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: _paymentsText,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        DataCell(
+          SizedBox(
+            width: 150,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _display(payment.memberName),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _display(payment.memberCode),
+                  style: const TextStyle(color: _paymentsMuted, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(Text(_display(payment.phone))),
+        DataCell(
+          Text(
+            _formatCurrency(payment.amount),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+        DataCell(Text(_display(payment.paymentMode))),
+        DataCell(_PaymentStatusPill(status: payment.paymentStatus)),
+        DataCell(
+          SizedBox(
+            width: 122,
+            child: Text(
+              _formatDate(payment.paymentDate, includeTime: true),
+              maxLines: 2,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 174,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TableDateLine(
+                  label: 'START',
+                  value: _formatDate(payment.subscriptionStartDate),
+                ),
+                const SizedBox(height: 5),
+                _TableDateLine(
+                  label: 'END',
+                  value: _formatDate(payment.subscriptionEndDate),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => payments.length;
+
+  @override
+  int get selectedRowCount => 0;
 }
 
-class _StatusDetail extends StatelessWidget {
-  const _StatusDetail(this.status);
+class _PaymentStatusPill extends StatelessWidget {
+  const _PaymentStatusPill({required this.status});
 
   final String status;
 
   @override
   Widget build(BuildContext context) {
     final color = status == 'PAID' ? _paidColor : _pendingColor;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'PAYMENT STATUS',
-          style: TextStyle(
-            color: _paymentsMuted,
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.7,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        _display(status),
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
         ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            _display(status),
-            style: TextStyle(
-              color: color,
-              fontSize: 9,
+      ),
+    );
+  }
+}
+
+class _TableDateLine extends StatelessWidget {
+  const _TableDateLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label  ',
+            style: const TextStyle(
+              color: _paymentsMuted,
+              fontSize: 8,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
             ),
           ),
-        ),
-      ],
+          TextSpan(text: value),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -862,13 +955,6 @@ class _SummaryItem {
   final String value;
   final IconData icon;
   final Color color;
-}
-
-class _PaymentDetail {
-  const _PaymentDetail(this.label, this.value);
-
-  final String label;
-  final String value;
 }
 
 String _dateFilterLabel(PaymentDateFilter filter) {

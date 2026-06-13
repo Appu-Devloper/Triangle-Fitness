@@ -7,6 +7,13 @@ import 'package:triangle_fitness/features/auth/data/repositories/firebase_auth_r
 import 'package:triangle_fitness/features/auth/data/repositories/firebase_member_management_repository.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/auth_repository.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/member_management_repository.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/add_member_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/admin_dashboard_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/members_list_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/payments_list_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/settings_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/subscriptions_management_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/transformations_management_page.dart';
 import 'package:triangle_fitness/features/home/data/repositories/external_link_repository_impl.dart';
 import 'package:triangle_fitness/features/home/data/repositories/gym_repository_impl.dart';
 import 'package:triangle_fitness/features/home/domain/usecases/get_gym_content.dart';
@@ -47,6 +54,16 @@ class TriangleFitnessApp extends StatelessWidget {
           title: 'Triangle Fitness',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.dark,
+          routes: {
+            '/admin': (_) => const AdminDashboardPage(),
+            '/admin/members': (_) => const MembersListPage(),
+            '/admin/members/add': (_) => const AddMemberPage(),
+            '/admin/payments': (_) => const PaymentsListPage(),
+            '/admin/subscriptions': (_) => const SubscriptionsManagementPage(),
+            '/admin/transformations': (_) =>
+                const TransformationsManagementPage(),
+            '/admin/settings': (_) => const SettingsPage(),
+          },
           home: const HomePage(),
         ),
       ),

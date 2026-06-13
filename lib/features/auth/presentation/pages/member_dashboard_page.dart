@@ -801,140 +801,260 @@ class _PaymentHistory extends StatelessWidget {
                 ),
               ),
             )
-          : ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: payments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                return _MemberPaymentCard(payment: payments[index]);
-              },
-            ),
+          : _MemberPaymentsTable(payments: payments),
     );
   }
 }
 
-class _MemberPaymentCard extends StatelessWidget {
-  const _MemberPaymentCard({required this.payment});
+class _MemberPaymentsTable extends StatefulWidget {
+  const _MemberPaymentsTable({required this.payments});
 
-  final MemberPayment payment;
+  final List<MemberPayment> payments;
+
+  @override
+  State<_MemberPaymentsTable> createState() => _MemberPaymentsTableState();
+}
+
+class _MemberPaymentsTableState extends State<_MemberPaymentsTable> {
+  static const _availableRowsPerPage = [5, 10, 20];
+
+  int _rowsPerPage = 5;
+  int? _sortColumnIndex = 4;
+  bool _sortAscending = false;
+  late List<MemberPayment> _payments;
+
+  @override
+  void initState() {
+    super.initState();
+    _payments = List.of(widget.payments);
+    _applySort();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MemberPaymentsTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.payments != widget.payments) {
+      _payments = List.of(widget.payments);
+      _applySort();
+    }
+  }
+
+  void _applySort() {
+    if (_sortColumnIndex == 1) {
+      _payments.sort((a, b) {
+        final result = a.amount.compareTo(b.amount);
+        return _sortAscending ? result : -result;
+      });
+      return;
+    }
+    if (_sortColumnIndex == 4) {
+      _payments.sort((a, b) {
+        final aDate = a.paymentDate?.millisecondsSinceEpoch ?? -1;
+        final bDate = b.paymentDate?.millisecondsSinceEpoch ?? -1;
+        final result = aDate.compareTo(bDate);
+        return _sortAscending ? result : -result;
+      });
+    }
+  }
+
+  void _sortBy(int columnIndex) {
+    setState(() {
+      if (_sortColumnIndex == columnIndex) {
+        _sortAscending = !_sortAscending;
+      } else {
+        _sortColumnIndex = columnIndex;
+        _sortAscending = true;
+      }
+      _applySort();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final paid = payment.paymentStatus.trim().toUpperCase() == 'PAID';
-    final statusColor = paid
-        ? const Color(0xFF62D58D)
-        : const Color(0xFFFFC66D);
-    final details = [
-      ('Receipt No', payment.receiptNo),
-      ('Amount', _formatCurrency(payment.amount)),
-      ('Payment Mode', payment.paymentMode),
-      ('Payment Date', _formatDate(payment.paymentDate)),
-      ('Subscription Start Date', _formatDate(payment.subscriptionStartDate)),
-      ('Subscription End Date', _formatDate(payment.subscriptionEndDate)),
-    ];
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D0F11),
-        border: Border.all(color: const Color(0xFF292C2F)),
-        borderRadius: BorderRadius.circular(10),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        cardColor: const Color(0xFF0D0F11),
+        dividerColor: const Color(0xFF292C2F),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  payment.receiptNo,
-                  style: const TextStyle(
-                    color: AppColors.paper,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  payment.paymentStatus,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
+      child: DataTableTheme(
+        data: const DataTableThemeData(
+          headingTextStyle: TextStyle(
+            color: AppColors.muted,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
           ),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 760
-                  ? 3
-                  : constraints.maxWidth >= 480
-                  ? 2
-                  : 1;
-              const gap = 14.0;
-              final width =
-                  (constraints.maxWidth - gap * (columns - 1)) / columns;
-              return Wrap(
-                spacing: gap,
-                runSpacing: 14,
-                children: [
-                  for (final detail in details)
-                    SizedBox(
-                      width: width,
-                      child: _PaymentDetail(label: detail.$1, value: detail.$2),
-                    ),
-                ],
-              );
-            },
+          dataTextStyle: TextStyle(
+            color: AppColors.paper,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
-        ],
+        ),
+        child: PaginatedDataTable(
+          key: const Key('member-payments-table'),
+          header: Text(
+            '${widget.payments.length} ${widget.payments.length == 1 ? 'record' : 'records'}',
+            style: const TextStyle(
+              color: AppColors.paper,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          headingRowColor: const WidgetStatePropertyAll(Color(0xFF111417)),
+          horizontalMargin: 16,
+          columnSpacing: 26,
+          dataRowMinHeight: 66,
+          dataRowMaxHeight: 74,
+          dividerThickness: 0.7,
+          showCheckboxColumn: false,
+          showFirstLastButtons: true,
+          showEmptyRows: false,
+          rowsPerPage: _rowsPerPage,
+          availableRowsPerPage: _availableRowsPerPage,
+          onRowsPerPageChanged: (value) {
+            if (value == null) return;
+            setState(() => _rowsPerPage = value);
+          },
+          sortColumnIndex: _sortColumnIndex,
+          sortAscending: _sortAscending,
+          source: _MemberPaymentsDataSource(_payments),
+          columns: [
+            const DataColumn(label: Text('RECEIPT NO')),
+            DataColumn(
+              numeric: true,
+              label: const Text('AMOUNT'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('MODE')),
+            const DataColumn(label: Text('STATUS')),
+            DataColumn(
+              label: const Text('PAYMENT DATE'),
+              onSort: (columnIndex, _) => _sortBy(columnIndex),
+            ),
+            const DataColumn(label: Text('SUBSCRIPTION PERIOD')),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PaymentDetail extends StatelessWidget {
-  const _PaymentDetail({required this.label, required this.value});
+class _MemberPaymentsDataSource extends DataTableSource {
+  _MemberPaymentsDataSource(this.payments);
+
+  final List<MemberPayment> payments;
+
+  @override
+  DataRow? getRow(int index) {
+    if (index >= payments.length) return null;
+    final payment = payments[index];
+    return DataRow(
+      key: ValueKey('member-payment-${payment.id}'),
+      cells: [
+        DataCell(
+          Text(
+            payment.receiptNo,
+            style: const TextStyle(
+              color: AppColors.red,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            _formatCurrency(payment.amount),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+        DataCell(Text(payment.paymentMode)),
+        DataCell(_MemberPaymentStatus(status: payment.paymentStatus)),
+        DataCell(Text(_formatDate(payment.paymentDate))),
+        DataCell(
+          SizedBox(
+            width: 170,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MemberPaymentDateLine(
+                  label: 'START',
+                  value: _formatDate(payment.subscriptionStartDate),
+                ),
+                const SizedBox(height: 5),
+                _MemberPaymentDateLine(
+                  label: 'END',
+                  value: _formatDate(payment.subscriptionEndDate),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => payments.length;
+
+  @override
+  int get selectedRowCount => 0;
+}
+
+class _MemberPaymentStatus extends StatelessWidget {
+  const _MemberPaymentStatus({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = status.trim().toUpperCase() == 'PAID';
+    final color = paid ? const Color(0xFF62D58D) : const Color(0xFFFFC66D);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberPaymentDateLine extends StatelessWidget {
+  const _MemberPaymentDateLine({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.7,
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label  ',
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppColors.paper,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
+          TextSpan(text: value),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

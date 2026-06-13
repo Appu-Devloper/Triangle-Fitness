@@ -46,7 +46,7 @@ void main() {
 
     await tester.pumpWidget(
       RepositoryProvider<AuthRepository>.value(
-        value: _PageRepository(),
+        value: _PageRepository(includePayment: true),
         child: MaterialApp(
           theme: AppTheme.dark,
           home: const MemberDashboardPage(),
@@ -59,6 +59,7 @@ void main() {
     expect(find.text('Nandhi'), findsNWidgets(2));
     expect(find.text('Gold Annual'), findsNWidgets(2));
     expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
+    expect(find.byKey(const Key('member-payments-table')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -97,12 +98,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Payment history'), findsOneWidget);
-    expect(find.text('REC-PAY-1'), findsNWidgets(2));
+    expect(find.byType(PaginatedDataTable), findsOneWidget);
+    expect(find.byKey(const Key('member-payments-table')), findsOneWidget);
+    expect(find.text('REC-PAY-1'), findsOneWidget);
     expect(find.text('Rs. 2500'), findsOneWidget);
     expect(find.text('UPI'), findsOneWidget);
     expect(find.text('PENDING'), findsOneWidget);
-    expect(find.text('SUBSCRIPTION START DATE'), findsOneWidget);
-    expect(find.text('SUBSCRIPTION END DATE'), findsOneWidget);
+    expect(find.text('SUBSCRIPTION PERIOD'), findsOneWidget);
   });
 }
 

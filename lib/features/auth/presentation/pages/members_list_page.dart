@@ -7,12 +7,13 @@ import 'package:triangle_fitness/features/auth/domain/repositories/member_manage
 import 'package:triangle_fitness/features/auth/presentation/cubit/members_list_cubit.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/add_member_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/member_details_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _membersBackground = AppColors.ink;
-const _membersCard = AppColors.surface;
-const _membersText = AppColors.paper;
-const _membersMuted = AppColors.muted;
-const _membersLine = Color(0xFF272A2D);
+const _membersBackground = AdminWorkspaceColors.background;
+const _membersCard = AdminWorkspaceColors.surface;
+const _membersText = AdminWorkspaceColors.text;
+const _membersMuted = AdminWorkspaceColors.muted;
+const _membersLine = AdminWorkspaceColors.border;
 
 class MembersListPage extends StatelessWidget {
   const MembersListPage({super.key});
@@ -32,52 +33,25 @@ class _MembersListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).copyWith(
-      scaffoldBackgroundColor: _membersBackground,
-      cardColor: _membersCard,
-    );
-    return Theme(
-      data: theme,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: _membersCard,
-          foregroundColor: _membersText,
-          surfaceTintColor: Colors.transparent,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AdminWorkspaceScaffold(
+      section: AdminWorkspaceSection.members,
+      title: 'MEMBERS',
+      subtitle: 'Search, review and manage gym memberships',
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('add-member-fab'),
+        onPressed: () => _openAddMember(context),
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: const Text('ADD MEMBER'),
+      ),
+      body: BlocBuilder<MembersListCubit, MembersListState>(
+        builder: (context, state) {
+          return Column(
             children: [
-              Text(
-                'MEMBERS',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-              ),
-              Text(
-                'Search and manage gym memberships',
-                style: TextStyle(color: _membersMuted, fontSize: 10),
-              ),
+              _MembersToolbar(state: state),
+              Expanded(child: _MembersBody(state: state)),
             ],
-          ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          key: const Key('add-member-fab'),
-          onPressed: () => _openAddMember(context),
-          backgroundColor: AppColors.red,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.person_add_alt_1_rounded),
-          label: const Text(
-            'ADD MEMBER',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-        ),
-        body: BlocBuilder<MembersListCubit, MembersListState>(
-          builder: (context, state) {
-            return Column(
-              children: [
-                _MembersToolbar(state: state),
-                Expanded(child: _MembersBody(state: state)),
-              ],
-            );
-          },
-        ),
+          );
+        },
       ),
     );
   }
@@ -98,56 +72,70 @@ class _MembersToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _membersCard,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 17),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                key: const Key('member-search'),
-                onChanged: context.read<MembersListCubit>().search,
-                style: const TextStyle(color: _membersText, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Search by name, phone or member code',
-                  hintStyle: const TextStyle(color: _membersMuted, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search_rounded, color: _membersMuted),
-                  filled: true,
-                  fillColor: _membersBackground,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: _membersLine),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: _membersLine),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.red, width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 13),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final filter in MembersFilter.values) ...[
-                      _FilterChip(
-                        filter: filter,
-                        selected: state.filter == filter,
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: AdminSurface(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  key: const Key('member-search'),
+                  onChanged: context.read<MembersListCubit>().search,
+                  style: const TextStyle(color: _membersText, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Search by name, phone or member code',
+                    hintStyle: const TextStyle(
+                      color: _membersMuted,
+                      fontSize: 13,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: _membersMuted,
+                    ),
+                    filled: true,
+                    fillColor: _membersBackground,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 15,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _membersLine),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _membersLine),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.red,
+                        width: 1.5,
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 13),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final filter in MembersFilter.values) ...[
+                        _FilterChip(
+                          filter: filter,
+                          selected: state.filter == filter,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -247,8 +235,10 @@ class _MembersTableState extends State<_MembersTable> {
     // default: sort by expires-in (soonest first)
     final now = DateTime.now();
     _sortedMembers.sort((a, b) {
-      final ad = daysUntilMembershipExpiry(a.subscriptionEndDate, now) ?? 9999999;
-      final bd = daysUntilMembershipExpiry(b.subscriptionEndDate, now) ?? 9999999;
+      final ad =
+          daysUntilMembershipExpiry(a.subscriptionEndDate, now) ?? 9999999;
+      final bd =
+          daysUntilMembershipExpiry(b.subscriptionEndDate, now) ?? 9999999;
       return ad.compareTo(bd);
     });
     _sortColumnIndex = 5; // EXPIRES IN column index
@@ -275,15 +265,20 @@ class _MembersTableState extends State<_MembersTable> {
       });
     } else if (_sortColumnIndex == 5) {
       _sortedMembers.sort((a, b) {
-        final ad = daysUntilMembershipExpiry(a.subscriptionEndDate, now) ?? 9999999;
-        final bd = daysUntilMembershipExpiry(b.subscriptionEndDate, now) ?? 9999999;
+        final ad =
+            daysUntilMembershipExpiry(a.subscriptionEndDate, now) ?? 9999999;
+        final bd =
+            daysUntilMembershipExpiry(b.subscriptionEndDate, now) ?? 9999999;
         final order = ad.compareTo(bd);
         return _sortAscending ? order : -order;
       });
     }
   }
 
-  void _sort<T>(int columnIndex, Comparable<T> Function(AdminMember m) getField) {
+  void _sort<T>(
+    int columnIndex,
+    Comparable<T> Function(AdminMember m) getField,
+  ) {
     setState(() {
       if (_sortColumnIndex == columnIndex) {
         _sortAscending = !_sortAscending;
@@ -388,7 +383,9 @@ class _MembersTableState extends State<_MembersTable> {
               label: const Text('EXPIRES IN'),
               onSort: (ci, _) => _sort<num?>(
                 ci,
-                (m) => daysUntilMembershipExpiry(m.subscriptionEndDate, now) ?? double.maxFinite.toInt(),
+                (m) =>
+                    daysUntilMembershipExpiry(m.subscriptionEndDate, now) ??
+                    double.maxFinite.toInt(),
               ),
             ),
             const DataColumn(label: Text('STATUS')),
@@ -742,7 +739,8 @@ class _MemberCardItem extends StatelessWidget {
             _MobileInfoRow(
               icon: Icons.event_outlined,
               label: 'EXPIRES',
-              value: '${_formatDate(member.subscriptionEndDate)} (${member.expiresInOn(now)})',
+              value:
+                  '${_formatDate(member.subscriptionEndDate)} (${member.expiresInOn(now)})',
             ),
           ],
         ),

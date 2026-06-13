@@ -6,14 +6,15 @@ import 'package:triangle_fitness/features/auth/domain/entities/create_member_req
 import 'package:triangle_fitness/features/auth/domain/entities/subscription_plan.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/member_management_repository.dart';
 import 'package:triangle_fitness/features/auth/presentation/cubit/add_member_cubit.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _pageBackground = AppColors.ink;
-const _card = AppColors.surface;
-const _fieldFill = Color(0xFF0D0F11);
-const _fieldBorder = Color(0xFF272A2D);
-const _text = AppColors.paper;
-const _muted = AppColors.muted;
-const _success = Color(0xFF55CA82);
+const _pageBackground = AdminWorkspaceColors.background;
+const _card = AdminWorkspaceColors.surface;
+const _fieldFill = AdminWorkspaceColors.field;
+const _fieldBorder = AdminWorkspaceColors.border;
+const _text = AdminWorkspaceColors.text;
+const _muted = AdminWorkspaceColors.muted;
+const _success = AdminWorkspaceColors.success;
 
 class AddMemberPage extends StatelessWidget {
   const AddMemberPage({super.key});
@@ -180,8 +181,11 @@ class _AddMemberViewState extends State<_AddMemberView> {
         },
         builder: (context, state) {
           final submitting = state.status == AddMemberStatus.submitting;
-          return Scaffold(
-            appBar: _buildAppBar(),
+          return AdminWorkspaceScaffold(
+            section: AdminWorkspaceSection.addMember,
+            title: 'ADD MEMBER',
+            subtitle: 'Create a profile, subscription and member login',
+            headerActions: const [_SecureBadge()],
             body: state.status == AddMemberStatus.loading
                 ? const _LoadingPlans()
                 : _buildWorkspace(state, submitting),
@@ -195,38 +199,6 @@ class _AddMemberViewState extends State<_AddMemberView> {
           );
         },
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: _card,
-      foregroundColor: _text,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      toolbarHeight: 72,
-      titleSpacing: 4,
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'ADD MEMBER',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
-            ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            'New membership registration',
-            style: TextStyle(color: _muted, fontSize: 10),
-          ),
-        ],
-      ),
-      actions: const [
-        Padding(padding: EdgeInsets.only(right: 18), child: _SecureBadge()),
-      ],
     );
   }
 
@@ -1143,7 +1115,9 @@ class _LoginNotice extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFF3159C7).withValues(alpha: 0.12),
-        border: Border.all(color: const Color(0xFF3159C7).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: const Color(0xFF3159C7).withValues(alpha: 0.3),
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: const Row(

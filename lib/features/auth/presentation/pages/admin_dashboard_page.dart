@@ -10,14 +10,15 @@ import 'package:triangle_fitness/features/auth/presentation/pages/payments_list_
 import 'package:triangle_fitness/features/auth/presentation/pages/settings_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/subscriptions_management_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/transformations_management_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _workspace = Color(0xFFF4F5F7);
-const _card = Colors.white;
-const _darkText = Color(0xFF17191C);
-const _softText = Color(0xFF687078);
-const _line = Color(0xFFE6E8EB);
-const _success = Color(0xFF168A53);
-const _warning = Color(0xFFE6962A);
+const _workspace = AdminWorkspaceColors.background;
+const _card = AdminWorkspaceColors.surface;
+const _darkText = AdminWorkspaceColors.text;
+const _softText = AdminWorkspaceColors.muted;
+const _line = AdminWorkspaceColors.border;
+const _success = AdminWorkspaceColors.success;
+const _warning = AdminWorkspaceColors.warning;
 
 class AdminDashboardPage extends StatelessWidget {
   const AdminDashboardPage({super.key});
@@ -52,321 +53,28 @@ class _AdminDashboardView extends StatelessWidget {
         }
       },
       builder: (context, state) {
+        final signingOut = state.status == AdminDashboardStatus.signingOut;
         return LayoutBuilder(
-          builder: (context, constraints) {
-            final showSidebar = constraints.maxWidth >= 1080;
-            return Scaffold(
-              backgroundColor: _workspace,
-              body: Row(
-                children: [
-                  if (showSidebar) _AdminSidebar(state: state),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _TopBar(state: state, compact: !showSidebar),
-                        Expanded(
-                          child: _DashboardBody(
-                            state: state,
-                            showQuickActions: !showSidebar,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar({required this.state});
-
-  final AdminDashboardState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final signingOut = state.status == AdminDashboardStatus.signingOut;
-    return Container(
-      width: 252,
-      color: AppColors.ink,
-      padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Image.asset(
-            'assets/logo.png',
-            height: 52,
-            alignment: Alignment.centerLeft,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(height: 36),
-          const _SidebarLabel('WORKSPACE'),
-          const SizedBox(height: 10),
-          const _SidebarItem(
-            label: 'Overview',
-            icon: Icons.space_dashboard_rounded,
-            selected: true,
-          ),
-          const SizedBox(height: 5),
-          for (final action in _adminActions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: _SidebarItem(
-                label: action.label,
-                icon: action.icon,
-                onTap: () => _openSection(context, action.label),
-              ),
-            ),
-          const Spacer(),
-          const Divider(color: Color(0xFF25282C)),
-          const SizedBox(height: 10),
-          _SidebarItem(
-            label: signingOut ? 'Signing out...' : 'Log out',
-            icon: Icons.logout_rounded,
-            destructive: true,
-            onTap: signingOut
+          builder: (context, constraints) => AdminWorkspaceScaffold(
+            section: AdminWorkspaceSection.overview,
+            title: 'ADMIN DASHBOARD',
+            subtitle: 'Business performance and management overview',
+            adminName: state.dashboard?.adminName,
+            signingOut: signingOut,
+            onSignOut: signingOut
                 ? null
                 : context.read<AdminDashboardCubit>().signOut,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarLabel extends StatelessWidget {
-  const _SidebarLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 14),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF696E74),
-          fontSize: 9,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.6,
-        ),
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  const _SidebarItem({
-    required this.label,
-    required this.icon,
-    this.onTap,
-    this.selected = false,
-    this.destructive = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool selected;
-  final bool destructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = destructive
-        ? const Color(0xFFFF777C)
-        : selected
-        ? Colors.white
-        : const Color(0xFFB2B6BB);
-    return Material(
-      color: selected ? AppColors.red : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.7,
-                  ),
-                ),
-              ),
-              if (!selected && !destructive)
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: Color(0xFF53585E),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.state, required this.compact});
-
-  final AdminDashboardState state;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final signingOut = state.status == AdminDashboardStatus.signingOut;
-    final name = state.dashboard?.adminName;
-    return Container(
-      height: 76,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 18 : 30),
-      decoration: const BoxDecoration(
-        color: _card,
-        border: Border(bottom: BorderSide(color: _line)),
-      ),
-      child: Row(
-        children: [
-          if (compact) ...[
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.ink,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: const Icon(
-                Icons.change_history_rounded,
-                color: AppColors.red,
-                size: 27,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          const Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ADMIN DASHBOARD',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: _darkText,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Triangle Fitness management',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: _softText, fontSize: 11),
-                ),
-              ],
+            onDestinationSelected: (destination) {
+              if (destination == AdminWorkspaceSection.overview) return;
+              _openSection(context, destination.label);
+            },
+            body: _DashboardBody(
+              state: state,
+              showQuickActions: constraints.maxWidth < 1050,
             ),
           ),
-          if (!compact && name != null) ...[
-            _AdminIdentity(name: name),
-            const SizedBox(width: 18),
-          ],
-          if (compact && MediaQuery.sizeOf(context).width < 520)
-            IconButton.filledTonal(
-              onPressed: signingOut
-                  ? null
-                  : context.read<AdminDashboardCubit>().signOut,
-              tooltip: 'Log out',
-              icon: signingOut
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.logout_rounded, size: 20),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: signingOut
-                  ? null
-                  : context.read<AdminDashboardCubit>().signOut,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _darkText,
-                side: const BorderSide(color: _line),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 13,
-                ),
-              ),
-              icon: signingOut
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.logout_rounded, size: 18),
-              label: Text(signingOut ? 'SIGNING OUT...' : 'LOG OUT'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminIdentity extends StatelessWidget {
-  const _AdminIdentity({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.red.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.admin_panel_settings_rounded,
-            color: AppColors.red,
-            size: 19,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(
-                color: _darkText,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const Text(
-              'Administrator',
-              style: TextStyle(color: _softText, fontSize: 10),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -823,7 +531,7 @@ class _MembershipHealth extends StatelessWidget {
             child: LinearProgressIndicator(
               value: activeRatio.clamp(0, 1),
               minHeight: 10,
-              backgroundColor: const Color(0xFFFFDADD),
+              backgroundColor: AdminWorkspaceColors.borderStrong,
               color: _success,
             ),
           ),

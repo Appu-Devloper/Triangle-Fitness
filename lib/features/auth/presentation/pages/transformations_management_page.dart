@@ -2,13 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
-const _background = AppColors.ink;
-const _card = AppColors.surface;
-const _text = AppColors.paper;
-const _muted = AppColors.muted;
-const _line = Color(0xFF272A2D);
-const _published = Color(0xFF55CA82);
+const _background = AdminWorkspaceColors.background;
+const _card = AdminWorkspaceColors.surface;
+const _text = AdminWorkspaceColors.text;
+const _muted = AdminWorkspaceColors.muted;
+const _line = AdminWorkspaceColors.border;
+const _published = AdminWorkspaceColors.success;
 
 enum TransformationFilter { all, published, unpublished }
 
@@ -180,26 +181,15 @@ class _TransformationsManagementPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(
-        title: const Text(
-          'Transformations',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        backgroundColor: _card,
-        surfaceTintColor: Colors.transparent,
-      ),
+    return AdminWorkspaceScaffold(
+      section: AdminWorkspaceSection.transformations,
+      title: 'Transformations',
+      subtitle: 'Curate member progress stories for the public website',
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('add-transformation'),
         onPressed: _openForm,
-        backgroundColor: AppColors.red,
-        foregroundColor: Colors.white,
         icon: const Icon(Icons.add_chart_rounded),
-        label: const Text(
-          'ADD TRANSFORMATION',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
+        label: const Text('ADD TRANSFORMATION'),
       ),
       body: StreamBuilder<List<TransformationRecord>>(
         stream: _transformationsStream,
@@ -268,46 +258,48 @@ class _Toolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _card,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 17),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                key: const Key('transformation-search'),
-                onChanged: onSearchChanged,
-                decoration: const InputDecoration(
-                  hintText: 'Search by member code, name or title',
-                  prefixIcon: Icon(Icons.search_rounded),
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: AdminSurface(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  key: const Key('transformation-search'),
+                  onChanged: onSearchChanged,
+                  decoration: const InputDecoration(
+                    hintText: 'Search by member code, name or title',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final value in TransformationFilter.values) ...[
-                      ChoiceChip(
-                        label: Text(value.name.toUpperCase()),
-                        selected: filter == value,
-                        onSelected: (_) => onFilterChanged(value),
-                        selectedColor: AppColors.red,
-                        backgroundColor: _background,
-                        side: BorderSide(
-                          color: filter == value ? AppColors.red : _line,
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final value in TransformationFilter.values) ...[
+                        ChoiceChip(
+                          label: Text(value.name.toUpperCase()),
+                          selected: filter == value,
+                          onSelected: (_) => onFilterChanged(value),
+                          selectedColor: AppColors.red,
+                          backgroundColor: _background,
+                          side: BorderSide(
+                            color: filter == value ? AppColors.red : _line,
+                          ),
+                          showCheckmark: false,
                         ),
-                        showCheckmark: false,
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
