@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isActiveAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true;
+    }
+
+    match /userCredentials/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isActiveAdmin()
+        && request.resource.data.uid == uid
+        && request.resource.data.role == "MEMBER"
+        && getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId)).data.uid == uid
+        && getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId)).data.createdBy == request.auth.uid;
+    }
+
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /members/{memberId} {
+      allow read: if (isSignedIn() && request.auth.uid == resource.data.uid)
+        || isActiveAdmin();
+      allow create: if isActiveAdmin()
+        && request.resource.data.createdBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/userCredentials/$(request.resource.data.uid)).data.memberId == memberId;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isActiveAdmin();
+      allow create: if isActiveAdmin()
+        && request.resource.data.collectedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId)).data.createdBy == request.auth.uid;
+    }
+
+    match /subscriptions/{planId} {
+      allow read: if true;
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+    }
+
+    match /transformations/{id} {
+      allow read: if resource.data.isPublished == true || isActiveAdmin();
+    }
+  }
+}

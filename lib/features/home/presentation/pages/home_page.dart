@@ -1,0 +1,1719 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/admin_login_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/member_login_page.dart';
+import 'package:triangle_fitness/features/home/domain/entities/equipment.dart';
+import 'package:triangle_fitness/features/home/domain/entities/home_action.dart';
+import 'package:triangle_fitness/features/home/domain/entities/program.dart';
+import 'package:triangle_fitness/features/home/presentation/bloc/home_bloc.dart';
+
+const _ink = AppColors.ink;
+const _surface = AppColors.surface;
+const _red = AppColors.red;
+const _paper = AppColors.paper;
+const _muted = AppColors.muted;
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _scrollController = ScrollController();
+  final _homeKey = GlobalKey();
+  final _programsKey = GlobalKey();
+  final _equipmentKey = GlobalKey();
+  final _aboutKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  Timer? _logoTapResetTimer;
+  int _logoTapCount = 0;
+
+  @override
+  void dispose() {
+    _logoTapResetTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _scrollTo(HomeSection section) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final key = _keyFor(section);
+    final target = key.currentContext;
+    final renderObject = target?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return;
+
+    final position = _scrollController.position;
+    final pinnedHeaderHeight = MediaQuery.paddingOf(context).top + 78;
+    final targetY = renderObject.localToGlobal(Offset.zero).dy;
+    final destination =
+        (_scrollController.offset + targetY - pinnedHeaderHeight - 12)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+
+    await _scrollController.animateTo(
+      destination,
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  GlobalKey _keyFor(HomeSection section) {
+    return switch (section) {
+      HomeSection.home => _homeKey,
+      HomeSection.programs => _programsKey,
+      HomeSection.equipment => _equipmentKey,
+      HomeSection.about => _aboutKey,
+      HomeSection.location => _locationKey,
+    };
+  }
+
+  void _navigate(HomeSection section, {bool closeDrawer = false}) {
+    if (closeDrawer) {
+      Navigator.of(context).pop();
+    }
+    context.read<HomeBloc>().add(HomeNavigationRequested(section));
+  }
+
+  void _open(ExternalAction action) {
+    context.read<HomeBloc>().add(HomeExternalActionRequested(action));
+  }
+
+  Future<void> _openMemberLogin({bool closeDrawer = false}) async {
+    if (closeDrawer) {
+      Navigator.of(context).pop();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+    }
+    if (!mounted) return;
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const MemberLoginPage()));
+  }
+
+  Future<void> _openAdminLogin() async {
+    _logoTapResetTimer?.cancel();
+    _logoTapCount = 0;
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const AdminLoginPage()));
+  }
+
+  void _handleLogoTap() {
+    _logoTapCount += 1;
+    _logoTapResetTimer?.cancel();
+    _logoTapResetTimer = Timer(const Duration(seconds: 2), () {
+      _logoTapCount = 0;
+    });
+
+    if (_logoTapCount >= 5) {
+      _openAdminLogin();
+      return;
+    }
+    _navigate(HomeSection.home);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<HomeBloc, HomeState>(
+      listenWhen: (previous, current) =>
+          previous.navigationRequestId != current.navigationRequestId ||
+          previous.messageRequestId != current.messageRequestId,
+      listener: (context, state) {
+        if (state.navigationRequestId > 0) {
+          _scrollTo(state.section);
+        }
+        if (state.message != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message!)));
+        }
+      },
+      builder: (context, state) {
+        final content = state.content;
+        return Scaffold(
+          endDrawer: _MobileMenu(
+            onNavigate: (section) => _navigate(section, closeDrawer: true),
+            onCall: () => _open(ExternalAction.call),
+            onMemberLogin: () => _openMemberLogin(closeDrawer: true),
+          ),
+          body: SelectionArea(
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  floating: true,
+                  automaticallyImplyLeading: false,
+                  elevation: 0,
+                  backgroundColor: _ink.withValues(alpha: 0.96),
+                  surfaceTintColor: Colors.transparent,
+                  toolbarHeight: 78,
+                  titleSpacing: 0,
+                  actions: const [SizedBox.shrink()],
+                  title: _Header(
+                    onLogoTap: _handleLogoTap,
+                    onLogoLongPress: _openAdminLogin,
+                    onPrograms: () => _navigate(HomeSection.programs),
+                    onEquipment: () => _navigate(HomeSection.equipment),
+                    onAbout: () => _navigate(HomeSection.about),
+                    onLocation: () => _navigate(HomeSection.location),
+                    onCall: () => _open(ExternalAction.call),
+                    onMemberLogin: _openMemberLogin,
+                  ),
+                ),
+                if (content == null)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: state.status == HomeStatus.failure
+                          ? Text(state.message ?? 'Unable to load content.')
+                          : const CircularProgressIndicator(),
+                    ),
+                  )
+                else
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        KeyedSubtree(
+                          key: _homeKey,
+                          child: HeroSection(
+                            onCall: () => _open(ExternalAction.call),
+                            onDirections: () =>
+                                _open(ExternalAction.directions),
+                            onMemberLogin: _openMemberLogin,
+                          ),
+                        ),
+                        KeyedSubtree(
+                          key: _programsKey,
+                          child: ProgramsSection(programs: content.programs),
+                        ),
+                        KeyedSubtree(
+                          key: _equipmentKey,
+                          child: EquipmentSection(equipment: content.equipment),
+                        ),
+                        KeyedSubtree(
+                          key: _aboutKey,
+                          child: const ExperienceSection(),
+                        ),
+                        KeyedSubtree(
+                          key: _locationKey,
+                          child: LocationSection(
+                            onDirections: () =>
+                                _open(ExternalAction.directions),
+                            onCall: () => _open(ExternalAction.call),
+                            onWhatsApp: () => _open(ExternalAction.whatsapp),
+                          ),
+                        ),
+                        const SiteFooter(),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.onLogoTap,
+    required this.onLogoLongPress,
+    required this.onPrograms,
+    required this.onEquipment,
+    required this.onAbout,
+    required this.onLocation,
+    required this.onCall,
+    required this.onMemberLogin,
+  });
+
+  final VoidCallback onLogoTap;
+  final VoidCallback onLogoLongPress;
+  final VoidCallback onPrograms;
+  final VoidCallback onEquipment;
+  final VoidCallback onAbout;
+  final VoidCallback onLocation;
+  final VoidCallback onCall;
+  final VoidCallback onMemberLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1240),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              InkWell(
+                onTap: onLogoTap,
+                onLongPress: onLogoLongPress,
+                borderRadius: BorderRadius.circular(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 172,
+                    height: 52,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (MediaQuery.sizeOf(context).width >= 1120) ...[
+                _NavButton(label: 'PROGRAMS', onTap: onPrograms),
+                _NavButton(label: 'EQUIPMENT', onTap: onEquipment),
+                _NavButton(label: 'WHY US', onTap: onAbout),
+                _NavButton(label: 'LOCATION', onTap: onLocation),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onMemberLogin,
+                  icon: const Icon(Icons.person_outline_rounded, size: 18),
+                  label: const Text('MEMBER LOGIN'),
+                ),
+                const SizedBox(width: 10),
+                FilledButton.icon(
+                  onPressed: onCall,
+                  icon: const Icon(Icons.call_outlined, size: 18),
+                  label: const Text('JOIN NOW'),
+                ),
+              ] else
+                Builder(
+                  builder: (context) => IconButton(
+                    onPressed: Scaffold.of(context).openEndDrawer,
+                    tooltip: 'Open menu',
+                    icon: const Icon(Icons.menu_rounded, size: 30),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: _paper,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileMenu extends StatelessWidget {
+  const _MobileMenu({
+    required this.onNavigate,
+    required this.onCall,
+    required this.onMemberLogin,
+  });
+
+  final ValueChanged<HomeSection> onNavigate;
+  final VoidCallback onCall;
+  final VoidCallback onMemberLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      ('Home', HomeSection.home),
+      ('Programs', HomeSection.programs),
+      ('Equipment', HomeSection.equipment),
+      ('Why us', HomeSection.about),
+      ('Location', HomeSection.location),
+    ];
+    return Drawer(
+      backgroundColor: _surface,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Image.asset('assets/logo.png', height: 100, fit: BoxFit.cover),
+              const SizedBox(height: 28),
+              for (final item in items)
+                ListTile(
+                  onTap: () => onNavigate(item.$2),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  title: Text(
+                    item.$1.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward, size: 18),
+                ),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: onMemberLogin,
+                icon: const Icon(Icons.person_outline_rounded),
+                label: const Text('MEMBER LOGIN'),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: onCall,
+                icon: const Icon(Icons.call_outlined),
+                label: const Text('CALL NANDHI'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HeroSection extends StatelessWidget {
+  const HeroSection({
+    super.key,
+    required this.onCall,
+    required this.onDirections,
+    required this.onMemberLogin,
+  });
+
+  final VoidCallback onCall;
+  final VoidCallback onDirections;
+  final VoidCallback onMemberLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_ink, Color(0xFF111315)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SectionShell(
+        verticalPadding: 62,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final copy = _HeroCopy(
+              onCall: onCall,
+              onDirections: onDirections,
+              onMemberLogin: onMemberLogin,
+            );
+            final visual = const _HeroVisual();
+            return wide
+                ? Row(
+                    children: [
+                      Expanded(flex: 10, child: copy),
+                      const SizedBox(width: 54),
+                      Expanded(flex: 9, child: visual),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [copy, const SizedBox(height: 42), visual],
+                  );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroCopy extends StatelessWidget {
+  const _HeroCopy({
+    required this.onCall,
+    required this.onDirections,
+    required this.onMemberLogin,
+  });
+
+  final VoidCallback onCall;
+  final VoidCallback onDirections;
+  final VoidCallback onMemberLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final headlineSize = width < 430 ? 48.0 : (width < 900 ? 64.0 : 76.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Eyebrow(text: 'KRS ROAD  /  KRISHNARAJASAGARA'),
+        const SizedBox(height: 20),
+        Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: 'BUILD YOUR\n'),
+              TextSpan(
+                text: 'STRONGEST',
+                style: TextStyle(
+                  color: _red,
+                  shadows: [
+                    Shadow(color: _red.withValues(alpha: 0.25), blurRadius: 24),
+                  ],
+                ),
+              ),
+              const TextSpan(text: ' SELF.'),
+            ],
+          ),
+          style: TextStyle(
+            height: 0.94,
+            fontSize: headlineSize,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -3,
+          ),
+        ),
+        const SizedBox(height: 26),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 590),
+          child: const Text(
+            'Serious equipment. Expert coaching. A motivating community built for every level of fitness.',
+            style: TextStyle(
+              color: _muted,
+              fontSize: 18,
+              height: 1.6,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(height: 34),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.icon(
+              onPressed: onCall,
+              icon: const Icon(Icons.bolt_rounded, size: 20),
+              label: const Text('START TRAINING'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onDirections,
+              icon: const Icon(Icons.near_me_outlined, size: 19),
+              label: const Text('GET DIRECTIONS'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onMemberLogin,
+              icon: const Icon(Icons.person_outline_rounded, size: 19),
+              label: const Text('MEMBER LOGIN'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 44),
+        const Wrap(
+          spacing: 28,
+          runSpacing: 20,
+          children: [
+            _HeroStat(value: '10+', label: 'TRAINING STYLES'),
+            _HeroStat(value: 'PRO', label: 'COACHING'),
+            _HeroStat(value: '100%', label: 'COMMITMENT'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 118,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroVisual extends StatelessWidget {
+  const _HeroVisual();
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1.18,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: _surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2B2E31)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 40,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset('assets/logo.png', fit: BoxFit.cover),
+            ),
+          ),
+          Positioned(
+            left: -12,
+            bottom: 24,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: const BoxDecoration(color: _red),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on_outlined, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'KRS SERVICES  •  571607',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProgramsSection extends StatelessWidget {
+  const ProgramsSection({super.key, required this.programs});
+
+  final List<Program> programs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0D0F11),
+        border: Border.symmetric(
+          horizontal: BorderSide(color: Color(0xFF222529)),
+        ),
+      ),
+      child: SectionShell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeading(
+              eyebrow: 'FIND YOUR TRAINING STYLE',
+              title: 'ONE GYM.\nMORE WAYS TO MOVE.',
+              description:
+                  'Train for strength, fitness, mobility or pure enjoyment. Choose one style or build a routine that combines them.',
+            ),
+            const SizedBox(height: 34),
+            const Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _ProgramFilterLabel(
+                  icon: Icons.fitness_center_rounded,
+                  label: 'STRENGTH',
+                ),
+                _ProgramFilterLabel(
+                  icon: Icons.favorite_border_rounded,
+                  label: 'CARDIO',
+                ),
+                _ProgramFilterLabel(
+                  icon: Icons.groups_2_outlined,
+                  label: 'GROUP CLASSES',
+                ),
+                _ProgramFilterLabel(
+                  icon: Icons.self_improvement_rounded,
+                  label: 'MIND & BODY',
+                ),
+              ],
+            ),
+            const SizedBox(height: 42),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final count = constraints.maxWidth >= 760 ? 2 : 1;
+                return GridView.builder(
+                  itemCount: programs.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: count,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: count == 2 ? 2.55 : 2.35,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = programs[index];
+                    return _ProgramTile(program: item);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgramFilterLabel extends StatelessWidget {
+  const _ProgramFilterLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF15181B),
+        border: Border.all(color: const Color(0xFF2A2E32)),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _red, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _paper,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramTile extends StatefulWidget {
+  const _ProgramTile({required this.program});
+
+  final Program program;
+
+  @override
+  State<_ProgramTile> createState() => _ProgramTileState();
+}
+
+class _ProgramTileState extends State<_ProgramTile> {
+  bool hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => hovered = true),
+      onExit: (_) => setState(() => hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        transform: Matrix4.translationValues(0, hovered ? -4 : 0, 0),
+        decoration: BoxDecoration(
+          color: hovered ? const Color(0xFF1B1E21) : const Color(0xFF141719),
+          border: Border.all(color: hovered ? _red : const Color(0xFF292D31)),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : null,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 92,
+              color: hovered ? _red : const Color(0xFF202327),
+              child: Center(
+                child: Icon(
+                  widget.program.type.icon,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 14, 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.program.category,
+                      style: const TextStyle(
+                        color: _red,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      widget.program.name.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _paper,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      widget.program.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 220),
+              padding: EdgeInsets.only(right: hovered ? 14 : 18),
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: hovered ? _red : const Color(0xFF3C4044),
+                  ),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: hovered ? _red : _muted,
+                  size: 15,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+extension on ProgramType {
+  IconData get icon => switch (this) {
+    ProgramType.weightTraining => Icons.fitness_center_rounded,
+    ProgramType.crossFit => Icons.timer_outlined,
+    ProgramType.personalTraining => Icons.person_outline_rounded,
+    ProgramType.aerobics => Icons.directions_run_rounded,
+    ProgramType.cycling => Icons.directions_bike_rounded,
+    ProgramType.yoga => Icons.self_improvement_rounded,
+    ProgramType.zumba => Icons.music_note_rounded,
+    ProgramType.danceFitness => Icons.nightlife_rounded,
+    ProgramType.aquatics => Icons.pool_rounded,
+    ProgramType.adultSports => Icons.sports_handball_rounded,
+  };
+}
+
+class EquipmentSection extends StatelessWidget {
+  const EquipmentSection({super.key, required this.equipment});
+
+  final List<Equipment> equipment;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeading(
+            eyebrow: 'COMMERCIAL-GRADE FLOOR',
+            title: 'EQUIPMENT THAT\nMEANS BUSINESS.',
+            description:
+                'A well-maintained mix of cardio, plate-loaded and pin-loaded machines for complete training.',
+          ),
+          const SizedBox(height: 48),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final count = constraints.maxWidth >= 1050
+                  ? 3
+                  : constraints.maxWidth >= 650
+                  ? 2
+                  : 1;
+              return GridView.builder(
+                itemCount: equipment.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: count,
+                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 18,
+                  childAspectRatio: count == 1 ? 0.92 : 0.84,
+                ),
+                itemBuilder: (context, index) =>
+                    EquipmentCard(equipment: equipment[index]),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class EquipmentCard extends StatefulWidget {
+  const EquipmentCard({super.key, required this.equipment});
+
+  final Equipment equipment;
+
+  @override
+  State<EquipmentCard> createState() => _EquipmentCardState();
+}
+
+class _EquipmentCardState extends State<EquipmentCard> {
+  bool hovered = false;
+
+  void _showDetails() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => EquipmentDialog(equipment: widget.equipment),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => hovered = true),
+      onExit: (_) => setState(() => hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, hovered ? -5 : 0, 0),
+        decoration: BoxDecoration(
+          color: _surface,
+          border: Border.all(color: hovered ? _red : const Color(0xFF292C2F)),
+          boxShadow: hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : null,
+        ),
+        child: InkWell(
+          onTap: _showDetails,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 7,
+                child: Container(
+                  color: const Color(0xFFEAE8E3),
+                  padding: const EdgeInsets.all(16),
+                  child: Hero(
+                    tag: widget.equipment.image,
+                    child: Image.asset(
+                      widget.equipment.image,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.equipment.category,
+                        style: const TextStyle(
+                          color: _red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Text(
+                        widget.equipment.name.toUpperCase(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          height: 1.15,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Row(
+                        children: [
+                          Text(
+                            'VIEW DETAILS',
+                            style: TextStyle(
+                              color: _muted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          SizedBox(width: 7),
+                          Icon(Icons.arrow_forward, color: _red, size: 16),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EquipmentDialog extends StatelessWidget {
+  const EquipmentDialog({super.key, required this.equipment});
+
+  final Equipment equipment;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 700;
+    final image = Container(
+      color: const Color(0xFFEAE8E3),
+      padding: const EdgeInsets.all(24),
+      child: Hero(
+        tag: equipment.image,
+        child: Image.asset(equipment.image, fit: BoxFit.contain),
+      ),
+    );
+    final details = Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            equipment.category,
+            style: const TextStyle(
+              color: _red,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            equipment.name.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 26,
+              height: 1.05,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            equipment.description,
+            style: const TextStyle(color: _muted, height: 1.6),
+          ),
+          const SizedBox(height: 24),
+          for (final spec in equipment.specs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: _red, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      spec,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+
+    return Dialog(
+      backgroundColor: _surface,
+      insetPadding: const EdgeInsets.all(20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 650),
+        child: SingleChildScrollView(
+          child: wide
+              ? SizedBox(
+                  height: 480,
+                  child: Row(
+                    children: [
+                      Expanded(child: image),
+                      Expanded(child: details),
+                    ],
+                  ),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 280, child: image),
+                    details,
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class ExperienceSection extends StatelessWidget {
+  const ExperienceSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _red,
+      child: SectionShell(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 850;
+            final review = const _ReviewBlock();
+            final reasons = const _ReasonsBlock();
+            return wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 11, child: review),
+                      const SizedBox(width: 72),
+                      Expanded(flex: 9, child: reasons),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [review, const SizedBox(height: 56), reasons],
+                  );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewBlock extends StatelessWidget {
+  const _ReviewBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Eyebrow(text: 'WHAT MEMBERS VALUE', light: true),
+        SizedBox(height: 22),
+        Icon(Icons.format_quote_rounded, size: 54, color: Colors.white),
+        SizedBox(height: 8),
+        Text(
+          'EXCELLENT EQUIPMENT. KNOWLEDGEABLE COACHES. A WORKOUT ENVIRONMENT THAT KEEPS YOU MOTIVATED.',
+          style: TextStyle(
+            fontSize: 30,
+            height: 1.18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.7,
+          ),
+        ),
+        SizedBox(height: 24),
+        Text(
+          'Members consistently highlight the friendly guidance, well-maintained machines and worthwhile training experience.',
+          style: TextStyle(
+            color: Color(0xFFFFD8D9),
+            fontSize: 16,
+            height: 1.6,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReasonsBlock extends StatelessWidget {
+  const _ReasonsBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: _ink.withValues(alpha: 0.94),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
+      ),
+      child: const Column(
+        children: [
+          _Reason(
+            number: '01',
+            title: 'EQUIPMENT YOU CAN TRUST',
+            text:
+                'Commercial machines maintained for consistent, confident training.',
+          ),
+          Divider(height: 40, color: Color(0xFF35383B)),
+          _Reason(
+            number: '02',
+            title: 'COACHING WITH PURPOSE',
+            text:
+                'Friendly, knowledgeable guidance that meets you at your level.',
+          ),
+          Divider(height: 40, color: Color(0xFF35383B)),
+          _Reason(
+            number: '03',
+            title: 'RESULTS YOU CAN FEEL',
+            text:
+                'Focused sessions and a motivating atmosphere built for progress.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Reason extends StatelessWidget {
+  const _Reason({
+    required this.number,
+    required this.title,
+    required this.text,
+  });
+
+  final String number;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          number,
+          style: const TextStyle(
+            color: _red,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(text, style: const TextStyle(color: _muted, height: 1.5)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class LocationSection extends StatelessWidget {
+  const LocationSection({
+    super.key,
+    required this.onDirections,
+    required this.onCall,
+    required this.onWhatsApp,
+  });
+
+  final VoidCallback onDirections;
+  final VoidCallback onCall;
+  final VoidCallback onWhatsApp;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: _paper,
+      child: SectionShell(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 860;
+            final info = _LocationInfo(
+              onDirections: onDirections,
+              onCall: onCall,
+              onWhatsApp: onWhatsApp,
+            );
+            const visual = _LocationVisual();
+            return wide
+                ? Row(
+                    children: [
+                      Expanded(child: info),
+                      const SizedBox(width: 56),
+                      const Expanded(child: visual),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [info, const SizedBox(height: 40), visual],
+                  );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationInfo extends StatelessWidget {
+  const _LocationInfo({
+    required this.onDirections,
+    required this.onCall,
+    required this.onWhatsApp,
+  });
+
+  final VoidCallback onDirections;
+  final VoidCallback onCall;
+  final VoidCallback onWhatsApp;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeading(
+          eyebrow: 'COME TRAIN WITH US',
+          title: 'YOUR NEXT REP\nSTARTS HERE.',
+          darkText: true,
+        ),
+        const SizedBox(height: 34),
+        const _ContactLine(
+          icon: Icons.location_on_outlined,
+          title: 'TRIANGLE FITNESS, KRS SERVICES',
+          text:
+              'Railway, KRS Rd, Hongahalli,\nKrishnarajasagara, Karnataka 571607',
+        ),
+        const SizedBox(height: 22),
+        const _ContactLine(
+          icon: Icons.person_outline_rounded,
+          title: 'NANDHI',
+          text: '+91 70199 97208',
+        ),
+        const SizedBox(height: 34),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.icon(
+              onPressed: onDirections,
+              icon: const Icon(Icons.near_me_outlined),
+              label: const Text('OPEN IN MAPS'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onCall,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _ink,
+                side: const BorderSide(color: Color(0xFFB8B5AF)),
+              ),
+              icon: const Icon(Icons.call_outlined),
+              label: const Text('CALL NOW'),
+            ),
+            IconButton.outlined(
+              onPressed: onWhatsApp,
+              tooltip: 'Chat on WhatsApp',
+              style: IconButton.styleFrom(
+                foregroundColor: _ink,
+                side: const BorderSide(color: Color(0xFFB8B5AF)),
+                padding: const EdgeInsets.all(16),
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactLine extends StatelessWidget {
+  const _ContactLine({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          color: _red,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: _ink,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                text,
+                style: const TextStyle(color: Color(0xFF64666A), height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationVisual extends StatelessWidget {
+  const _LocationVisual();
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1.15,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _ink,
+          border: Border.all(color: const Color(0xFF26282B), width: 8),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(child: CustomPaint(painter: _MapPatternPainter())),
+            const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on, color: _red, size: 64),
+                  SizedBox(height: 8),
+                  Text(
+                    'TRIANGLE FITNESS',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'KRS ROAD • HONGAHALLI',
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final road = Paint()
+      ..color = const Color(0xFF26292C)
+      ..strokeWidth = 9
+      ..style = PaintingStyle.stroke;
+    final minor = Paint()
+      ..color = const Color(0xFF1A1D20)
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(-20, size.height * 0.72),
+      Offset(size.width + 20, size.height * 0.25),
+      road,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.18, -20),
+      Offset(size.width * 0.72, size.height + 20),
+      road,
+    );
+    canvas.drawLine(
+      Offset(-20, size.height * 0.25),
+      Offset(size.width * 0.62, size.height + 20),
+      minor,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.52, -20),
+      Offset(size.width + 20, size.height * 0.8),
+      minor,
+    );
+    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.18), 36, minor);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class SiteFooter extends StatelessWidget {
+  const SiteFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF050506),
+      child: SectionShell(
+        verticalPadding: 42,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 650;
+            final logo = Image.asset(
+              'assets/logo.png',
+              width: 180,
+              height: 72,
+              fit: BoxFit.cover,
+            );
+            const copy = Text(
+              '© 2026 TRIANGLE FITNESS  •  KRS ROAD, KARNATAKA',
+              style: TextStyle(
+                color: _muted,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+              ),
+            );
+            return compact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [logo, const SizedBox(height: 20), copy],
+                  )
+                : Row(children: [logo, const Spacer(), copy]);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class SectionShell extends StatelessWidget {
+  const SectionShell({
+    super.key,
+    required this.child,
+    this.verticalPadding = 96,
+  });
+
+  final Widget child;
+  final double verticalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final horizontal = MediaQuery.sizeOf(context).width < 700 ? 20.0 : 36.0;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1240),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontal,
+            vertical: verticalPadding,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class Eyebrow extends StatelessWidget {
+  const Eyebrow({super.key, required this.text, this.light = false});
+
+  final String text;
+  final bool light;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 28, height: 3, color: light ? Colors.white : _red),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: light ? Colors.white : _red,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.7,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class SectionHeading extends StatelessWidget {
+  const SectionHeading({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.description,
+    this.darkText = false,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String? description;
+  final bool darkText;
+
+  @override
+  Widget build(BuildContext context) {
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Eyebrow(text: eyebrow),
+        const SizedBox(height: 18),
+        Text(
+          title,
+          style: TextStyle(
+            color: darkText ? _ink : _paper,
+            fontSize: MediaQuery.sizeOf(context).width < 500 ? 38 : 48,
+            height: 0.98,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -1.6,
+          ),
+        ),
+      ],
+    );
+
+    if (description == null) return heading;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 800) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              heading,
+              const SizedBox(height: 22),
+              _Description(text: description!, darkText: darkText),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(flex: 6, child: heading),
+            const SizedBox(width: 50),
+            Expanded(
+              flex: 4,
+              child: _Description(text: description!, darkText: darkText),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Description extends StatelessWidget {
+  const _Description({required this.text, required this.darkText});
+
+  final String text;
+  final bool darkText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: darkText ? const Color(0xFF64666A) : _muted,
+        fontSize: 16,
+        height: 1.65,
+      ),
+    );
+  }
+}

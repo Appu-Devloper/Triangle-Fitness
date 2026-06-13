@@ -1,0 +1,17 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "triangle-fitness",
+          "configurations": {
+            "web": "1:68957198262:web:fef8abb9de328e2dd55317"
+          }
+        }
+      }
+    }
+  }
+}
