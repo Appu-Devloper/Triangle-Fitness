@@ -36,37 +36,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
   @override
   void initState() {
     super.initState();
-    _memberCode.addListener(_normalizeMemberCodeField);
-    _receiptNo.addListener(_normalizeReceiptNoField);
     _loadMember();
-  }
-
-  void _normalizeMemberCodeField() {
-    _applyNormalizedValue(
-      _memberCode,
-      normalizeMemberCode(_memberCode.text, keepPrefixOnEmpty: true),
-    );
-  }
-
-  void _normalizeReceiptNoField() {
-    _applyNormalizedValue(
-      _receiptNo,
-      normalizeReceiptNo(_receiptNo.text, keepPrefixOnEmpty: true),
-    );
-  }
-
-  void _applyNormalizedValue(
-    TextEditingController controller,
-    String normalized,
-  ) {
-    if (controller.text == normalized) return;
-    var offset = controller.selection.baseOffset;
-    if (offset < 0) offset = normalized.length;
-    if (offset > normalized.length) offset = normalized.length;
-    controller.value = TextEditingValue(
-      text: normalized,
-      selection: TextSelection.collapsed(offset: offset),
-    );
   }
 
   Future<void> _loadMember() async {
@@ -292,6 +262,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _memberCode,
                           'Member Code',
                           Icons.tag_rounded,
+                          prefixText: '$memberCodePrefix ',
                           validator: (v) => hasMeaningfulMemberCode(v ?? '')
                               ? null
                               : 'Enter member code.',
@@ -388,8 +359,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _receiptNo,
                           'Receipt No',
                           Icons.receipt_long_outlined,
-                          prefixText: ' ',
-                          inputFormatters: [_receiptFormatter()],
+                          prefixText: '$receiptNoPrefix ',
                           validator: (v) => hasMeaningfulReceiptNo(v ?? '')
                               ? null
                               : 'Enter receipt number.',
@@ -451,6 +421,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
     IconData icon, {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    String? prefixText,
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
@@ -459,7 +430,11 @@ class _EditMemberPageState extends State<EditMemberPage> {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       maxLines: maxLines,
-      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        prefixText: prefixText,
+      ),
       validator: validator,
     );
   }

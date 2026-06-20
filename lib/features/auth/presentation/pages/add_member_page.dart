@@ -63,45 +63,13 @@ class _AddMemberViewState extends State<_AddMemberView> {
   @override
   void initState() {
     super.initState();
-    _memberCode.text = memberCodePrefix;
-    _receiptNo.text = receiptNoPrefix;
     _memberCode.addListener(_refreshPreview);
-    _memberCode.addListener(_normalizeMemberCodeField);
     _name.addListener(_refreshPreview);
     _phone.addListener(_refreshPreview);
-    _receiptNo.addListener(_normalizeReceiptNoField);
   }
 
   void _refreshPreview() {
     if (mounted) setState(() {});
-  }
-
-  void _normalizeMemberCodeField() {
-    _applyNormalizedValue(
-      _memberCode,
-      normalizeMemberCode(_memberCode.text, keepPrefixOnEmpty: true),
-    );
-  }
-
-  void _normalizeReceiptNoField() {
-    _applyNormalizedValue(
-      _receiptNo,
-      normalizeReceiptNo(_receiptNo.text, keepPrefixOnEmpty: true),
-    );
-  }
-
-  void _applyNormalizedValue(
-    TextEditingController controller,
-    String normalized,
-  ) {
-    if (controller.text == normalized) return;
-    var offset = controller.selection.baseOffset;
-    if (offset < 0) offset = normalized.length;
-    if (offset > normalized.length) offset = normalized.length;
-    controller.value = TextEditingValue(
-      text: normalized,
-      selection: TextSelection.collapsed(offset: offset),
-    );
   }
 
   Future<void> _jumpToSection(GlobalKey key) async {
@@ -356,8 +324,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
                   'Member Code',
                   icon: Icons.tag_rounded,
                   hint: 'Example: TF001',
-                  prefixText: ' ',
-                  inputFormatters: [_memberCodeFormatter()],
+                  prefixText: '$memberCodePrefix ',
                   validator: (value) {
                     return hasMeaningfulMemberCode(value ?? '')
                         ? null
@@ -554,8 +521,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       'Receipt No / Initial Password',
                       icon: Icons.receipt_long_outlined,
                       hint: 'Example: REC-1001',
-                      prefixText: ' ',
-                      inputFormatters: [_receiptFormatter()],
+                      prefixText: '$receiptNoPrefix ',
                       validator: (value) {
                         final receipt = value ?? '';
                         if (!hasMeaningfulReceiptNo(receipt)) {
@@ -685,24 +651,6 @@ class _AddMemberViewState extends State<_AddMemberView> {
       final number = double.tryParse(text);
       return number == null || number <= 0 ? message : null;
     };
-  }
-  TextInputFormatter _memberCodeFormatter() {
-    return TextInputFormatter.withFunction((oldValue, newValue) {
-      final editable = editableMemberCodeValue(newValue.text);
-      return TextEditingValue(
-        text: editable,
-        selection: TextSelection.collapsed(offset: editable.length),
-      );
-    });
-  }
-  TextInputFormatter _receiptFormatter() {
-    return TextInputFormatter.withFunction((oldValue, newValue) {
-      final editable = editableReceiptNoValue(newValue.text);
-      return TextEditingValue(
-        text: editable,
-        selection: TextSelection.collapsed(offset: editable.length),
-      );
-    });
   }
 }
 
