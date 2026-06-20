@@ -119,10 +119,8 @@ class _AddMemberViewState extends State<_AddMemberView> {
   void dispose() {
     _scrollController.dispose();
     _memberCode.removeListener(_refreshPreview);
-    _memberCode.removeListener(_normalizeMemberCodeField);
     _name.removeListener(_refreshPreview);
     _phone.removeListener(_refreshPreview);
-    _receiptNo.removeListener(_normalizeReceiptNoField);
     _memberCode.dispose();
     _name.dispose();
     _phone.dispose();
@@ -358,6 +356,8 @@ class _AddMemberViewState extends State<_AddMemberView> {
                   'Member Code',
                   icon: Icons.tag_rounded,
                   hint: 'Example: TF001',
+                  prefixText: ' ',
+                  inputFormatters: [_memberCodeFormatter()],
                   validator: (value) {
                     return hasMeaningfulMemberCode(value ?? '')
                         ? null
@@ -554,6 +554,8 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       'Receipt No / Initial Password',
                       icon: Icons.receipt_long_outlined,
                       hint: 'Example: REC-1001',
+                      prefixText: ' ',
+                      inputFormatters: [_receiptFormatter()],
                       validator: (value) {
                         final receipt = value ?? '';
                         if (!hasMeaningfulReceiptNo(receipt)) {
@@ -683,6 +685,24 @@ class _AddMemberViewState extends State<_AddMemberView> {
       final number = double.tryParse(text);
       return number == null || number <= 0 ? message : null;
     };
+  }
+  TextInputFormatter _memberCodeFormatter() {
+    return TextInputFormatter.withFunction((oldValue, newValue) {
+      final editable = editableMemberCodeValue(newValue.text);
+      return TextEditingValue(
+        text: editable,
+        selection: TextSelection.collapsed(offset: editable.length),
+      );
+    });
+  }
+  TextInputFormatter _receiptFormatter() {
+    return TextInputFormatter.withFunction((oldValue, newValue) {
+      final editable = editableReceiptNoValue(newValue.text);
+      return TextEditingValue(
+        text: editable,
+        selection: TextSelection.collapsed(offset: editable.length),
+      );
+    });
   }
 }
 
@@ -1618,3 +1638,7 @@ String _initials(String name) {
   if (parts.isEmpty || parts.first.isEmpty) return 'NM';
   return parts.take(2).map((part) => part[0].toUpperCase()).join();
 }
+
+
+
+

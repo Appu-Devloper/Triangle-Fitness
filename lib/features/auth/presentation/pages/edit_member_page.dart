@@ -81,17 +81,15 @@ class _EditMemberPageState extends State<EditMemberPage> {
         return;
       }
       final data = doc.data()!;
-      _memberCode.text = normalizeMemberCode(
+      _memberCode.text = editableMemberCodeValue(
         (data['memberCode'] ?? '').toString(),
-        keepPrefixOnEmpty: true,
       );
       _name.text = (data['name'] ?? '').toString();
       _phone.text = (data['phone'] ?? '').toString();
       _email.text = (data['email'] ?? '').toString();
       _address.text = (data['address'] ?? '').toString();
-      _receiptNo.text = normalizeReceiptNo(
+      _receiptNo.text = editableReceiptNoValue(
         (data['receiptNo'] ?? '').toString(),
-        keepPrefixOnEmpty: true,
       );
       _weight.text = data['weightKg']?.toString() ?? '';
       _height.text = data['heightCm']?.toString() ?? '';
@@ -390,6 +388,8 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _receiptNo,
                           'Receipt No',
                           Icons.receipt_long_outlined,
+                          prefixText: ' ',
+                          inputFormatters: [_receiptFormatter()],
                           validator: (v) => hasMeaningfulReceiptNo(v ?? '')
                               ? null
                               : 'Enter receipt number.',
@@ -612,3 +612,6 @@ class _FieldSlot {
   final Widget child;
   final bool fullWidth;
 }
+
+
+

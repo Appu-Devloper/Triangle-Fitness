@@ -1,5 +1,17 @@
 const memberCodePrefix = 'TF';
 const receiptNoPrefix = 'REC-';
+String editableMemberCodeValue(String value) {
+  final normalized = normalizeMemberCode(value);
+  return normalized.startsWith(memberCodePrefix)
+      ? normalized.substring(memberCodePrefix.length)
+      : normalized;
+}
+String editableReceiptNoValue(String value) {
+  final normalized = normalizeReceiptNo(value);
+  return normalized.startsWith(receiptNoPrefix)
+      ? normalized.substring(receiptNoPrefix.length)
+      : normalized;
+}
 
 String normalizeMemberCode(
   String value, {
@@ -38,3 +50,4 @@ List<String> receiptPasswordCandidates(String value) {
   if (normalized == trimmed.toUpperCase()) return [trimmed];
   return [trimmed, normalized];
 }
+
