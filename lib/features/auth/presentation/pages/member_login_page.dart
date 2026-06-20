@@ -102,7 +102,7 @@ class _MemberLoginViewState extends State<_MemberLoginView> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'First time login? Use your receipt number as password.',
+                    'First time login? Use your receipt number like REC-1001 as password.',
                     style: TextStyle(
                       color: Color(0xFFA3A6AA),
                       fontSize: 12,

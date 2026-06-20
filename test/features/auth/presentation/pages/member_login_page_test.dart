@@ -25,7 +25,9 @@ void main() {
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('MEMBER LOGIN'), findsOneWidget);
     expect(
-      find.text('First time login? Use your receipt number as password.'),
+      find.text(
+        'First time login? Use your receipt number like REC-1001 as password.',
+      ),
       findsOneWidget,
     );
   });

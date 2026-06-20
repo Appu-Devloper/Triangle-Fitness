@@ -38,6 +38,14 @@ void main() {
     expect(find.text('Payment Status'), findsOneWidget);
     expect(find.text('Member Status'), findsOneWidget);
     expect(find.text('CREATE MEMBER'), findsOneWidget);
+    final memberCodeField = tester.widget<TextFormField>(
+      find.widgetWithText(TextFormField, 'Member Code'),
+    );
+    final receiptField = tester.widget<TextFormField>(
+      find.widgetWithText(TextFormField, 'Receipt No / Initial Password'),
+    );
+    expect(memberCodeField.controller?.text, 'TF');
+    expect(receiptField.controller?.text, 'REC-');
     expect(tester.takeException(), isNull);
   });
 
@@ -202,6 +210,61 @@ void main() {
     expect(repository.createdRequest?.heightCm, isNull);
     expect(repository.createdRequest?.paymentMode, 'CASH');
     expect(repository.createdRequest?.paymentStatus, 'PAID');
+  });
+
+  testWidgets('normalizes member code and receipt prefixes before submit', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _PageRepository();
+    await tester.pumpWidget(
+      RepositoryProvider<MemberManagementRepository>.value(
+        value: repository,
+        child: const MaterialApp(home: AddMemberPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Member Code'),
+      '007',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Name'),
+      'Prefix Member',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Phone Number'),
+      '9000000000',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Address'),
+      'KRS Road',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Receipt No / Initial Password'),
+      '1007',
+    );
+
+    final planDropdown = find.byType(DropdownButtonFormField<SubscriptionPlan>);
+    await tester.ensureVisible(planDropdown);
+    await tester.tap(planDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gold Monthly (30 days)').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select date').first);
+    await tester.tap(find.text('Select date').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('CREATE MEMBER'));
+    await tester.tap(find.text('CREATE MEMBER'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdRequest?.memberCode, 'TF007');
+    expect(repository.createdRequest?.receiptNo, 'REC-1007');
   });
 }
 

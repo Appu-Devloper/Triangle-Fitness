@@ -6,6 +6,7 @@ import 'package:triangle_fitness/features/auth/domain/entities/create_member_req
 import 'package:triangle_fitness/features/auth/domain/entities/subscription_plan.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/member_management_repository.dart';
 import 'package:triangle_fitness/features/auth/presentation/cubit/add_member_cubit.dart';
+import 'package:triangle_fitness/features/auth/shared/member_identifier_formatter.dart';
 import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
 const _pageBackground = AdminWorkspaceColors.background;
@@ -62,13 +63,45 @@ class _AddMemberViewState extends State<_AddMemberView> {
   @override
   void initState() {
     super.initState();
+    _memberCode.text = memberCodePrefix;
+    _receiptNo.text = receiptNoPrefix;
     _memberCode.addListener(_refreshPreview);
+    _memberCode.addListener(_normalizeMemberCodeField);
     _name.addListener(_refreshPreview);
     _phone.addListener(_refreshPreview);
+    _receiptNo.addListener(_normalizeReceiptNoField);
   }
 
   void _refreshPreview() {
     if (mounted) setState(() {});
+  }
+
+  void _normalizeMemberCodeField() {
+    _applyNormalizedValue(
+      _memberCode,
+      normalizeMemberCode(_memberCode.text, keepPrefixOnEmpty: true),
+    );
+  }
+
+  void _normalizeReceiptNoField() {
+    _applyNormalizedValue(
+      _receiptNo,
+      normalizeReceiptNo(_receiptNo.text, keepPrefixOnEmpty: true),
+    );
+  }
+
+  void _applyNormalizedValue(
+    TextEditingController controller,
+    String normalized,
+  ) {
+    if (controller.text == normalized) return;
+    var offset = controller.selection.baseOffset;
+    if (offset < 0) offset = normalized.length;
+    if (offset > normalized.length) offset = normalized.length;
+    controller.value = TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: offset),
+    );
   }
 
   Future<void> _jumpToSection(GlobalKey key) async {
@@ -86,8 +119,10 @@ class _AddMemberViewState extends State<_AddMemberView> {
   void dispose() {
     _scrollController.dispose();
     _memberCode.removeListener(_refreshPreview);
+    _memberCode.removeListener(_normalizeMemberCodeField);
     _name.removeListener(_refreshPreview);
     _phone.removeListener(_refreshPreview);
+    _receiptNo.removeListener(_normalizeReceiptNoField);
     _memberCode.dispose();
     _name.dispose();
     _phone.dispose();
@@ -135,12 +170,12 @@ class _AddMemberViewState extends State<_AddMemberView> {
 
     context.read<AddMemberCubit>().submit(
       CreateMemberRequest(
-        memberCode: _memberCode.text.trim(),
+        memberCode: normalizeMemberCode(_memberCode.text),
         name: _name.text.trim(),
         phone: _phone.text.replaceAll(RegExp(r'\D'), ''),
         email: _email.text.trim(),
         address: _address.text.trim(),
-        receiptNo: _receiptNo.text.trim(),
+        receiptNo: normalizeReceiptNo(_receiptNo.text),
         weightKg: _nullableNumber(_weight.text),
         heightCm: _nullableNumber(_height.text),
         plan: plan,
@@ -233,7 +268,9 @@ class _AddMemberViewState extends State<_AddMemberView> {
           final mobile = !desktop;
           final preview = _RegistrationPreview(
             name: _name.text.trim(),
-            memberCode: _memberCode.text.trim(),
+            memberCode: hasMeaningfulMemberCode(_memberCode.text)
+                ? normalizeMemberCode(_memberCode.text)
+                : '',
             phone: _phone.text.trim(),
             state: state,
             memberStatus: _memberStatus,
@@ -321,7 +358,11 @@ class _AddMemberViewState extends State<_AddMemberView> {
                   'Member Code',
                   icon: Icons.tag_rounded,
                   hint: 'Example: TF001',
-                  validator: _required('Enter member code.'),
+                  validator: (value) {
+                    return hasMeaningfulMemberCode(value ?? '')
+                        ? null
+                        : 'Enter member code.';
+                  },
                 ),
                 _input(
                   _name,
@@ -512,11 +553,14 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       _receiptNo,
                       'Receipt No / Initial Password',
                       icon: Icons.receipt_long_outlined,
-                      hint: 'Minimum 6 characters',
+                      hint: 'Example: REC-1001',
                       validator: (value) {
-                        final receipt = value?.trim() ?? '';
-                        if (receipt.isEmpty) return 'Enter receipt number.';
-                        if (receipt.length < 6) {
+                        final receipt = value ?? '';
+                        if (!hasMeaningfulReceiptNo(receipt)) {
+                          return 'Enter receipt number.';
+                        }
+                        final normalized = normalizeReceiptNo(receipt);
+                        if (normalized.length < 6) {
                           return 'Receipt number must be at least 6 characters.';
                         }
                         return null;
@@ -862,7 +906,9 @@ class _RegistrationPreview extends StatelessWidget {
                 ),
                 const SizedBox(height: 9),
                 Text(
-                  memberCode.isEmpty ? 'Member code not entered' : memberCode,
+                  hasMeaningfulMemberCode(memberCode)
+                      ? memberCode
+                      : 'Member code not entered',
                   style: const TextStyle(
                     color: Color(0xFFACB0B5),
                     fontSize: 11,
@@ -1326,7 +1372,7 @@ class _LoginNotice extends StatelessWidget {
           SizedBox(width: 11),
           Expanded(
             child: Text(
-              'The member will sign in with their phone number. The receipt number is their temporary password and must be changed after first login.',
+              'The member will sign in with their phone number. For first login, use the receipt number like REC-1001 as the temporary password.',
               style: TextStyle(
                 color: Color(0xFFD0DFFF),
                 fontSize: 11,

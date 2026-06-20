@@ -7,6 +7,7 @@ import 'package:triangle_fitness/features/auth/domain/entities/member_dashboard.
 import 'package:triangle_fitness/features/auth/domain/entities/member_payment.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/member_session.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/auth_repository.dart';
+import 'package:triangle_fitness/features/auth/shared/member_identifier_formatter.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({required FirebaseInitializer initializer})
@@ -36,10 +37,7 @@ class FirebaseAuthRepository implements AuthRepository {
   }) async {
     try {
       await _initializer.initialize();
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: memberEmailFromPhone(phone),
-        password: password,
-      );
+      final credential = await _signInMemberWithReceiptFallback(phone, password);
       final uid = credential.user?.uid;
       if (uid == null) {
         throw const AuthFailure('Unable to identify this member account.');
@@ -431,6 +429,36 @@ class FirebaseAuthRepository implements AuthRepository {
     } on Object {
       // Preserve the original authentication error.
     }
+  }
+
+  Future<UserCredential> _signInMemberWithReceiptFallback(
+    String phone,
+    String password,
+  ) async {
+    final email = memberEmailFromPhone(phone);
+    final candidates = receiptPasswordCandidates(password);
+    if (candidates.isEmpty) {
+      throw FirebaseAuthException(code: 'invalid-credential');
+    }
+
+    for (var index = 0; index < candidates.length; index += 1) {
+      final candidate = candidates[index];
+      try {
+        return await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: candidate,
+        );
+      } on FirebaseAuthException catch (error) {
+        final retryable =
+            error.code == 'invalid-credential' ||
+            error.code == 'wrong-password' ||
+            error.code == 'invalid-login-credentials';
+        final isLast = index == candidates.length - 1;
+        if (!retryable || isLast) rethrow;
+      }
+    }
+
+    throw FirebaseAuthException(code: 'invalid-credential');
   }
 
   String _firebaseErrorMessage(FirebaseException error) {

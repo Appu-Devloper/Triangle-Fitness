@@ -7,6 +7,7 @@ import 'package:triangle_fitness/features/auth/domain/entities/admin_member.dart
 import 'package:triangle_fitness/features/auth/domain/entities/create_member_request.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/subscription_plan.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/member_management_repository.dart';
+import 'package:triangle_fitness/features/auth/shared/member_identifier_formatter.dart';
 import 'package:triangle_fitness/firebase_options.dart';
 
 class FirebaseMemberManagementRepository implements MemberManagementRepository {
@@ -103,6 +104,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
     FirebaseAuth? secondaryAuth;
     var memberAccountCreated = false;
     var loginEmail = '';
+    final receiptNo = normalizeReceiptNo(request.receiptNo);
     try {
       await _initializer.initialize();
       final admin = _auth.currentUser;
@@ -113,6 +115,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       }
       final adminUid = admin.uid;
       final phone = request.phone.replaceAll(RegExp(r'\D'), '');
+      final memberCode = normalizeMemberCode(request.memberCode);
       loginEmail = '$phone@trianglefitness.local';
 
       final secondaryApp = await _secondaryApp();
@@ -120,7 +123,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       final memberCredential = await secondaryAuth
           .createUserWithEmailAndPassword(
             email: loginEmail,
-            password: request.receiptNo,
+            password: receiptNo,
           );
       memberAccountCreated = true;
       final memberUid = memberCredential.user?.uid;
@@ -145,12 +148,12 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
 
       batch.set(memberReference, {
         'uid': memberUid,
-        'memberCode': request.memberCode,
+        'memberCode': memberCode,
         'name': request.name,
         'phone': phone,
         'email': request.email,
         'address': request.address,
-        'receiptNo': request.receiptNo,
+        'receiptNo': receiptNo,
         'weightKg': request.weightKg,
         'heightCm': request.heightCm,
         'subscription': {
@@ -170,7 +173,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       batch.set(credentialsReference, {
         'uid': memberUid,
         'memberId': memberReference.id,
-        'memberCode': request.memberCode,
+        'memberCode': memberCode,
         'phone': phone,
         'loginEmail': loginEmail,
         'initialLoginType': 'RECEIPT_NO',
@@ -184,10 +187,10 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       });
       batch.set(paymentReference, {
         'memberId': memberReference.id,
-        'memberCode': request.memberCode,
+        'memberCode': memberCode,
         'memberName': request.name,
         'phone': phone,
-        'receiptNo': request.receiptNo,
+        'receiptNo': receiptNo,
         'amount': request.amount,
         'paymentMode': paymentMode,
         'paymentStatus': paymentStatus,
@@ -204,7 +207,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: request.receiptNo,
+        password: receiptNo,
       );
       rethrow;
     } on FirebaseException catch (error, stackTrace) {
@@ -213,7 +216,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: request.receiptNo,
+        password: receiptNo,
       );
       throw MemberManagementFailure(_firebaseErrorMessage(error));
     } on Object catch (error, stackTrace) {
@@ -222,7 +225,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: request.receiptNo,
+        password: receiptNo,
       );
       throw MemberManagementFailure(error.toString());
     }

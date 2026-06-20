@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:triangle_fitness/core/theme/app_colors.dart';
+import 'package:triangle_fitness/features/auth/shared/member_identifier_formatter.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/member_details_page.dart';
 
 class EditMemberPage extends StatefulWidget {
@@ -35,7 +36,37 @@ class _EditMemberPageState extends State<EditMemberPage> {
   @override
   void initState() {
     super.initState();
+    _memberCode.addListener(_normalizeMemberCodeField);
+    _receiptNo.addListener(_normalizeReceiptNoField);
     _loadMember();
+  }
+
+  void _normalizeMemberCodeField() {
+    _applyNormalizedValue(
+      _memberCode,
+      normalizeMemberCode(_memberCode.text, keepPrefixOnEmpty: true),
+    );
+  }
+
+  void _normalizeReceiptNoField() {
+    _applyNormalizedValue(
+      _receiptNo,
+      normalizeReceiptNo(_receiptNo.text, keepPrefixOnEmpty: true),
+    );
+  }
+
+  void _applyNormalizedValue(
+    TextEditingController controller,
+    String normalized,
+  ) {
+    if (controller.text == normalized) return;
+    var offset = controller.selection.baseOffset;
+    if (offset < 0) offset = normalized.length;
+    if (offset > normalized.length) offset = normalized.length;
+    controller.value = TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: offset),
+    );
   }
 
   Future<void> _loadMember() async {
@@ -50,12 +81,18 @@ class _EditMemberPageState extends State<EditMemberPage> {
         return;
       }
       final data = doc.data()!;
-      _memberCode.text = (data['memberCode'] ?? '').toString();
+      _memberCode.text = normalizeMemberCode(
+        (data['memberCode'] ?? '').toString(),
+        keepPrefixOnEmpty: true,
+      );
       _name.text = (data['name'] ?? '').toString();
       _phone.text = (data['phone'] ?? '').toString();
       _email.text = (data['email'] ?? '').toString();
       _address.text = (data['address'] ?? '').toString();
-      _receiptNo.text = (data['receiptNo'] ?? '').toString();
+      _receiptNo.text = normalizeReceiptNo(
+        (data['receiptNo'] ?? '').toString(),
+        keepPrefixOnEmpty: true,
+      );
       _weight.text = data['weightKg']?.toString() ?? '';
       _height.text = data['heightCm']?.toString() ?? '';
       _status = (data['status'] ?? 'ACTIVE').toString();
@@ -81,12 +118,12 @@ class _EditMemberPageState extends State<EditMemberPage> {
       final height = _nullableNumber(_height.text);
 
       await memberRef.update({
-        'memberCode': _memberCode.text.trim(),
+        'memberCode': normalizeMemberCode(_memberCode.text),
         'name': _name.text.trim(),
         'phone': _phone.text.trim(),
         'email': _email.text.trim(),
         'address': _address.text.trim(),
-        'receiptNo': _receiptNo.text.trim(),
+        'receiptNo': normalizeReceiptNo(_receiptNo.text),
         'weightKg': weight,
         'heightCm': height,
         'status': _status,
@@ -99,7 +136,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
             .collection('userCredentials')
             .doc(_uid);
         await credRef.set({
-          'memberCode': _memberCode.text.trim(),
+          'memberCode': normalizeMemberCode(_memberCode.text),
           'phone': _phone.text.trim(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -124,6 +161,8 @@ class _EditMemberPageState extends State<EditMemberPage> {
 
   @override
   void dispose() {
+    _memberCode.removeListener(_normalizeMemberCodeField);
+    _receiptNo.removeListener(_normalizeReceiptNoField);
     _memberCode.dispose();
     _name.dispose();
     _phone.dispose();
@@ -255,7 +294,9 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _memberCode,
                           'Member Code',
                           Icons.tag_rounded,
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Enter member code.' : null,
+                          validator: (v) => hasMeaningfulMemberCode(v ?? '')
+                              ? null
+                              : 'Enter member code.',
                         ),
                       ),
                       _FieldSlot(
@@ -349,6 +390,9 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _receiptNo,
                           'Receipt No',
                           Icons.receipt_long_outlined,
+                          validator: (v) => hasMeaningfulReceiptNo(v ?? '')
+                              ? null
+                              : 'Enter receipt number.',
                         ),
                       ),
                       _FieldSlot(
