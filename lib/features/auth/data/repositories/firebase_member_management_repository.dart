@@ -105,6 +105,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
     var memberAccountCreated = false;
     var loginEmail = '';
     final receiptNo = normalizeReceiptNo(request.receiptNo);
+    final authPassword = memberAuthPasswordFromReceipt(receiptNo);
     try {
       await _initializer.initialize();
       final admin = _auth.currentUser;
@@ -123,7 +124,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       final memberCredential = await secondaryAuth
           .createUserWithEmailAndPassword(
             email: loginEmail,
-            password: receiptNo,
+            password: authPassword,
           );
       memberAccountCreated = true;
       final memberUid = memberCredential.user?.uid;
@@ -207,7 +208,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: receiptNo,
+        password: authPassword,
       );
       rethrow;
     } on FirebaseException catch (error, stackTrace) {
@@ -216,7 +217,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: receiptNo,
+        password: authPassword,
       );
       throw MemberManagementFailure(_firebaseErrorMessage(error));
     } on Object catch (error, stackTrace) {
@@ -225,7 +226,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         secondaryAuth: secondaryAuth,
         memberAccountCreated: memberAccountCreated,
         loginEmail: loginEmail,
-        password: receiptNo,
+        password: authPassword,
       );
       throw MemberManagementFailure(error.toString());
     }

@@ -43,11 +43,22 @@ bool hasMeaningfulMemberCode(String value) =>
 bool hasMeaningfulReceiptNo(String value) =>
     normalizeReceiptNo(value).length > receiptNoPrefix.length;
 
+String memberAuthPasswordFromReceipt(String value) {
+  final normalized = normalizeReceiptNo(value);
+  if (normalized.length >= 6) return normalized;
+  return normalized.padRight(6, '0');
+}
+
 List<String> receiptPasswordCandidates(String value) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) return const [];
   final normalized = normalizeReceiptNo(trimmed);
-  if (normalized == trimmed.toUpperCase()) return [trimmed];
-  return [trimmed, normalized];
+  final derived = memberAuthPasswordFromReceipt(trimmed);
+  final candidates = <String>[];
+  for (final candidate in [derived, trimmed, normalized]) {
+    if (candidate.isEmpty) continue;
+    if (!candidates.contains(candidate)) candidates.add(candidate);
+  }
+  return candidates;
 }
 

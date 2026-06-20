@@ -44,7 +44,9 @@ void main() {
     final receiptField = tester.widget<TextFormField>(
       find.widgetWithText(TextFormField, 'Receipt No / Initial Password'),
     );
+    expect(memberCodeField.decoration?.prefixText, 'TF ');
     expect(memberCodeField.decoration?.hintText, 'Enter number only, example: 001');
+    expect(receiptField.decoration?.prefixText, 'REC- ');
     expect(receiptField.decoration?.hintText, 'Enter number only, example: 1001');
     expect(tester.takeException(), isNull);
   });

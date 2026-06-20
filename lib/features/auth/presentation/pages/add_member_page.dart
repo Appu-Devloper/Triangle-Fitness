@@ -324,6 +324,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
                   'Member Code',
                   icon: Icons.tag_rounded,
                   hint: 'Enter number only, example: 001',
+                  prefixText: '$memberCodePrefix ',
                   validator: (value) {
                     return hasMeaningfulMemberCode(value ?? '')
                         ? null
@@ -520,14 +521,11 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       'Receipt No / Initial Password',
                       icon: Icons.receipt_long_outlined,
                       hint: 'Enter number only, example: 1001',
+                      prefixText: '$receiptNoPrefix ',
                       validator: (value) {
                         final receipt = value ?? '';
                         if (!hasMeaningfulReceiptNo(receipt)) {
                           return 'Enter receipt number.';
-                        }
-                        final normalized = normalizeReceiptNo(receipt);
-                        if (normalized.length < 6) {
-                          return 'Receipt number must be at least 6 characters.';
                         }
                         return null;
                       },
