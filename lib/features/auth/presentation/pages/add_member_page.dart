@@ -323,8 +323,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
                   _memberCode,
                   'Member Code',
                   icon: Icons.tag_rounded,
-                  hint: 'Example: TF001',
-                  prefixText: '$memberCodePrefix ',
+                  hint: 'Enter number only, example: 001',
                   validator: (value) {
                     return hasMeaningfulMemberCode(value ?? '')
                         ? null
@@ -520,8 +519,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       _receiptNo,
                       'Receipt No / Initial Password',
                       icon: Icons.receipt_long_outlined,
-                      hint: 'Example: REC-1001',
-                      prefixText: '$receiptNoPrefix ',
+                      hint: 'Enter number only, example: 1001',
                       validator: (value) {
                         final receipt = value ?? '';
                         if (!hasMeaningfulReceiptNo(receipt)) {

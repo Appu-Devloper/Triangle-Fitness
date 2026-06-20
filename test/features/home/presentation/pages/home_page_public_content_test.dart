@@ -33,6 +33,7 @@ void main() {
         openingTime: '5:00 AM',
         closingTime: '10:00 PM',
         whatsappNumber: '917019997208',
+        instagramUrl: 'https://instagram.com/trianglefitness',
       ),
       subscriptionPlans: [
         PublicSubscriptionPlan(
@@ -77,6 +78,8 @@ void main() {
     expect(find.text('CHOOSE PLAN'), findsOneWidget);
     expect(find.text('OPENING HOURS'), findsOneWidget);
     expect(find.text('5:00 AM - 10:00 PM'), findsOneWidget);
+    expect(find.text('INSTAGRAM'), findsOneWidget);
+    expect(find.text('https://instagram.com/trianglefitness'), findsOneWidget);
     expect(find.text('EMAIL'), findsNothing);
     expect(find.text('MEMBER LOGIN'), findsWidgets);
   });
@@ -117,4 +120,7 @@ class _LinksRepository implements ExternalLinkRepository {
 
   @override
   Future<bool> open(ExternalAction action) async => true;
+
+  @override
+  Future<bool> openUrl(String url) async => true;
 }

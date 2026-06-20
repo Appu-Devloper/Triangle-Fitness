@@ -53,6 +53,16 @@ void main() {
       HomeState(message: 'Could not open this link.', messageRequestId: 1),
     ],
   );
+
+  blocTest<HomeBloc, HomeState>(
+    'exposes a user message when an external url cannot open',
+    build: () => buildBloc(linkOpens: false),
+    act: (bloc) =>
+        bloc.add(const HomeExternalUrlRequested('https://instagram.com/test')),
+    expect: () => const [
+      HomeState(message: 'Could not open this link.', messageRequestId: 1),
+    ],
+  );
 }
 
 class _FakeGymRepository implements GymRepository {
@@ -71,4 +81,7 @@ class _FakeExternalLinkRepository implements ExternalLinkRepository {
 
   @override
   Future<bool> open(ExternalAction action) async => result;
+
+  @override
+  Future<bool> openUrl(String url) async => result;
 }

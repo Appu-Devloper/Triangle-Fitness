@@ -17,4 +17,11 @@ class ExternalLinkRepositoryImpl implements ExternalLinkRepository {
     };
     return launcher.launch(uri);
   }
+
+  @override
+  Future<bool> openUrl(String url) {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null || !uri.hasScheme) return Future.value(false);
+    return launcher.launch(uri);
+  }
 }

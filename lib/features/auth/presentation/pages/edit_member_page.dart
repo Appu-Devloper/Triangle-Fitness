@@ -260,7 +260,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _memberCode,
                           'Member Code',
                           Icons.tag_rounded,
-                          prefixText: '$memberCodePrefix ',
                           validator: (v) => hasMeaningfulMemberCode(v ?? '')
                               ? null
                               : 'Enter member code.',
@@ -357,7 +356,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           _receiptNo,
                           'Receipt No',
                           Icons.receipt_long_outlined,
-                          prefixText: '$receiptNoPrefix ',
                           validator: (v) => hasMeaningfulReceiptNo(v ?? '')
                               ? null
                               : 'Enter receipt number.',

@@ -18,6 +18,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeStarted>(_onStarted);
     on<HomeNavigationRequested>(_onNavigationRequested);
     on<HomeExternalActionRequested>(_onExternalActionRequested);
+    on<HomeExternalUrlRequested>(_onExternalUrlRequested);
   }
 
   final GetGymContent _getGymContent;
@@ -55,8 +56,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeExternalActionRequested event,
     Emitter<HomeState> emit,
   ) async {
+    await _openLink(emit, () => _openExternalLink(event.action));
+  }
+
+  Future<void> _onExternalUrlRequested(
+    HomeExternalUrlRequested event,
+    Emitter<HomeState> emit,
+  ) async {
+    await _openLink(emit, () => _openExternalLink.openUrl(event.url));
+  }
+
+  Future<void> _openLink(
+    Emitter<HomeState> emit,
+    Future<bool> Function() open,
+  ) async {
     try {
-      final opened = await _openExternalLink(event.action);
+      final opened = await open();
       if (!opened) {
         emit(
           state.copyWith(

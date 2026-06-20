@@ -28,3 +28,12 @@ final class HomeExternalActionRequested extends HomeEvent {
   @override
   List<Object> get props => [action];
 }
+
+final class HomeExternalUrlRequested extends HomeEvent {
+  const HomeExternalUrlRequested(this.url);
+
+  final String url;
+
+  @override
+  List<Object> get props => [url];
+}

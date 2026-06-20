@@ -88,6 +88,10 @@ class _HomePageState extends State<HomePage> {
     context.read<HomeBloc>().add(HomeExternalActionRequested(action));
   }
 
+  void _openUrl(String url) {
+    context.read<HomeBloc>().add(HomeExternalUrlRequested(url));
+  }
+
   Future<void> _openMemberLogin({bool closeDrawer = false}) async {
     if (closeDrawer) {
       Navigator.of(context).pop();
@@ -215,6 +219,7 @@ class _HomePageState extends State<HomePage> {
                                 _open(ExternalAction.directions),
                             onCall: () => _open(ExternalAction.call),
                             onWhatsApp: () => _open(ExternalAction.whatsapp),
+                            onInstagram: () => _openUrl(content.profile.instagramUrl),
                           ),
                         ),
                         const SiteFooter(),
@@ -1830,12 +1835,14 @@ class LocationSection extends StatelessWidget {
     required this.onDirections,
     required this.onCall,
     required this.onWhatsApp,
+    required this.onInstagram,
   });
 
   final GymProfile profile;
   final VoidCallback onDirections;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
+  final VoidCallback onInstagram;
 
   @override
   Widget build(BuildContext context) {
@@ -1850,6 +1857,7 @@ class LocationSection extends StatelessWidget {
               onDirections: onDirections,
               onCall: onCall,
               onWhatsApp: onWhatsApp,
+              onInstagram: onInstagram,
             );
             final visual = _LocationVisual(gymName: profile.gymName);
             return ConstrainedBox(
@@ -1881,12 +1889,14 @@ class _LocationInfo extends StatelessWidget {
     required this.onDirections,
     required this.onCall,
     required this.onWhatsApp,
+    required this.onInstagram,
   });
 
   final GymProfile profile;
   final VoidCallback onDirections;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
+  final VoidCallback onInstagram;
 
   @override
   Widget build(BuildContext context) {
@@ -1955,6 +1965,7 @@ class _LocationInfo extends StatelessWidget {
             icon: Icons.camera_alt_outlined,
             title: 'INSTAGRAM',
             text: profile.instagramUrl,
+            onTap: onInstagram,
           ),
           const SizedBox(height: 22),
         ],
@@ -2005,15 +2016,17 @@ class _ContactLine extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.text,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String text;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -2039,12 +2052,26 @@ class _ContactLine extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 text,
-                style: const TextStyle(color: Color(0xFF64666A), height: 1.5),
+                style: TextStyle(
+                  color: onTap == null ? const Color(0xFF64666A) : _red,
+                  height: 1.5,
+                  decoration: onTap == null ? null : TextDecoration.underline,
+                ),
               ),
             ],
           ),
         ),
       ],
+    );
+
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: content,
+      ),
     );
   }
 }

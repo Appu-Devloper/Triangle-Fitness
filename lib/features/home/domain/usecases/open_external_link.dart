@@ -7,4 +7,5 @@ class OpenExternalLink {
   final ExternalLinkRepository repository;
 
   Future<bool> call(ExternalAction action) => repository.open(action);
+  Future<bool> openUrl(String url) => repository.openUrl(url);
 }
