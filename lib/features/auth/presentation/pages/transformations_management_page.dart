@@ -805,9 +805,9 @@ class _TransformationDialogState extends State<_TransformationDialog> {
     setState(() {
       _selectedMember = member;
       _selectedMemberId = member?.id;
-      if (member?.heightCm != null) {
-        _height.text = _plainNullable(member!.heightCm);
-      }
+      _height.text = member?.heightCm == null
+          ? ''
+          : _plainNullable(member!.heightCm);
     });
   }
 
@@ -835,7 +835,7 @@ class _TransformationDialogState extends State<_TransformationDialog> {
         'description': _description.text.trim(),
         'weightBeforeKg': double.parse(_beforeWeight.text.trim()),
         'weightAfterKg': double.parse(_afterWeight.text.trim()),
-        'heightCm': double.parse(_height.text.trim()),
+        'heightCm': _nullableNumber(_height.text.trim()),
         'durationText': _duration.text.trim(),
         'isPublished': _isPublished,
         'displayOrder': int.parse(_displayOrder.text.trim()),
@@ -1038,7 +1038,7 @@ class _NumberFields extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: _numberValidator,
+                validator: _optionalNumberValidator,
               ),
             ),
           ],
@@ -1139,6 +1139,13 @@ class _TransformationsError extends StatelessWidget {
 
 String? _numberValidator(String? value) {
   final parsed = double.tryParse(value?.trim() ?? '');
+  return parsed == null || parsed < 0 ? 'Enter a valid number.' : null;
+}
+
+String? _optionalNumberValidator(String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return null;
+  final parsed = double.tryParse(text);
   return parsed == null || parsed < 0 ? 'Enter a valid number.' : null;
 }
 

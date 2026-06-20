@@ -26,13 +26,13 @@ class _AdminLoginView extends StatefulWidget {
 }
 
 class _AdminLoginViewState extends State<_AdminLoginView> {
+  static const _adminEmail = 'trianglefitness.krs@gmail.com';
+
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -41,7 +41,7 @@ class _AdminLoginViewState extends State<_AdminLoginView> {
     if (!_formKey.currentState!.validate()) return;
     TextInput.finishAutofillContext();
     context.read<AuthCubit>().loginAdmin(
-      email: _emailController.text.trim(),
+      email: _adminEmail,
       password: _passwordController.text,
     );
   }
@@ -72,19 +72,38 @@ class _AdminLoginViewState extends State<_AdminLoginView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AuthTextField(
-                    controller: _emailController,
-                    label: 'Email address',
-                    icon: Icons.alternate_email_rounded,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    validator: (value) {
-                      final email = value?.trim() ?? '';
-                      if (!email.contains('@') || !email.contains('.')) {
-                        return 'Enter a valid email address.';
-                      }
-                      return null;
-                    },
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.alternate_email_rounded,
+                          color: Colors.white70,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Admin Email',
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(color: Colors.white70),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(_adminEmail),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(

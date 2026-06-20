@@ -115,6 +115,34 @@ void main() {
     expect(find.text('TRY AGAIN'), findsOneWidget);
   });
 
+  testWidgets('falls back to CASH and PAID for missing payment values', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pumpPage(
+      tester,
+      Stream.value([
+        PaymentRecord(
+          id: 'fallback',
+          receiptNo: 'REC-2001',
+          memberCode: 'TF200',
+          memberName: 'Fallback Member',
+          phone: '9888888888',
+          amount: 500,
+          paymentMode: 'CASH',
+          paymentStatus: 'PAID',
+          paymentDate: now,
+          subscriptionStartDate: now,
+          subscriptionEndDate: now.add(const Duration(days: 30)),
+        ),
+      ]),
+    );
+
+    expect(find.text('Fallback Member'), findsOneWidget);
+    expect(find.text('CASH'), findsOneWidget);
+    expect(find.text('PAID'), findsOneWidget);
+  });
+
   testWidgets('renders the payment table without overflow on mobile', (
     tester,
   ) async {

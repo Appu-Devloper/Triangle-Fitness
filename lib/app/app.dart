@@ -13,7 +13,6 @@ import 'package:triangle_fitness/features/auth/presentation/pages/members_list_p
 import 'package:triangle_fitness/features/auth/presentation/pages/payments_list_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/settings_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/subscriptions_management_page.dart';
-import 'package:triangle_fitness/features/auth/presentation/pages/transformations_management_page.dart';
 import 'package:triangle_fitness/features/home/data/repositories/external_link_repository_impl.dart';
 import 'package:triangle_fitness/features/home/data/repositories/gym_repository_impl.dart';
 import 'package:triangle_fitness/features/home/domain/usecases/get_gym_content.dart';
@@ -60,8 +59,6 @@ class TriangleFitnessApp extends StatelessWidget {
             '/admin/members/add': (_) => const AddMemberPage(),
             '/admin/payments': (_) => const PaymentsListPage(),
             '/admin/subscriptions': (_) => const SubscriptionsManagementPage(),
-            '/admin/transformations': (_) =>
-                const TransformationsManagementPage(),
             '/admin/settings': (_) => const SettingsPage(),
           },
           home: const HomePage(),

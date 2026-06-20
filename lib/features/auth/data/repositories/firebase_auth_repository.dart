@@ -24,7 +24,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
   static String measurementDisplay(Object? value, String unit) {
     final text = value?.toString().trim();
-    if (text == null || text.isEmpty) return 'Not available';
+    if (text == null || text.isEmpty) return 'Not added';
     if (text.toLowerCase().contains(unit.toLowerCase())) return text;
     return '$text $unit';
   }
@@ -225,8 +225,8 @@ class FirebaseAuthRepository implements AuthRepository {
                     payment['paymentAmount'] ??
                     payment['paidAmount'],
               ),
-              paymentMode: _displayValue(payment['paymentMode']),
-              paymentStatus: _displayValue(payment['paymentStatus']),
+              paymentMode: _paymentModeValue(payment['paymentMode']),
+              paymentStatus: _paymentStatusValue(payment['paymentStatus']),
               paymentDate: _dateValue(payment['paymentDate']),
               subscriptionStartDate: _dateValue(
                 payment['subscriptionStartDate'],
@@ -267,7 +267,7 @@ class FirebaseAuthRepository implements AuthRepository {
           subscription['planName'] ?? subscription['name'],
         ),
         amount: _displayValue(subscription['amount']),
-        paymentStatus: _displayValue(subscription['paymentStatus']),
+        paymentStatus: _paymentStatusValue(subscription['paymentStatus']),
         subscriptionStatus: _displayValue(
           subscription['subscriptionStatus'] ?? subscription['status'],
         ),
@@ -394,6 +394,16 @@ class FirebaseAuthRepository implements AuthRepository {
   String _displayValue(Object? value) {
     final text = value?.toString().trim();
     return text == null || text.isEmpty ? 'Not available' : text;
+  }
+
+  String _paymentModeValue(Object? value) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    return text.isEmpty ? 'CASH' : text;
+  }
+
+  String _paymentStatusValue(Object? value) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    return text.isEmpty ? 'PAID' : text;
   }
 
   String _upperValue(Object? value) =>

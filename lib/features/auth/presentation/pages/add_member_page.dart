@@ -39,6 +39,7 @@ class _AddMemberView extends StatefulWidget {
 
 class _AddMemberViewState extends State<_AddMemberView> {
   final _formKey = GlobalKey<FormState>();
+  final _scrollController = ScrollController();
   final _memberCode = TextEditingController();
   final _name = TextEditingController();
   final _phone = TextEditingController();
@@ -48,6 +49,11 @@ class _AddMemberViewState extends State<_AddMemberView> {
   final _weight = TextEditingController();
   final _height = TextEditingController();
   final _amount = TextEditingController();
+  final _identityKey = GlobalKey();
+  final _contactKey = GlobalKey();
+  final _fitnessKey = GlobalKey();
+  final _membershipKey = GlobalKey();
+  final _paymentKey = GlobalKey();
 
   String _paymentMode = 'CASH';
   String _paymentStatus = 'PAID';
@@ -65,8 +71,20 @@ class _AddMemberViewState extends State<_AddMemberView> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _jumpToSection(GlobalKey key) async {
+    final context = key.currentContext;
+    if (context == null) return;
+    await Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
+  }
+
   @override
   void dispose() {
+    _scrollController.dispose();
     _memberCode.removeListener(_refreshPreview);
     _name.removeListener(_refreshPreview);
     _phone.removeListener(_refreshPreview);
@@ -123,14 +141,18 @@ class _AddMemberViewState extends State<_AddMemberView> {
         email: _email.text.trim(),
         address: _address.text.trim(),
         receiptNo: _receiptNo.text.trim(),
-        weightKg: double.tryParse(_weight.text.trim()),
-        heightCm: double.tryParse(_height.text.trim()),
+        weightKg: _nullableNumber(_weight.text),
+        heightCm: _nullableNumber(_height.text),
         plan: plan,
         startDate: startDate,
         endDate: endDate,
         amount: double.parse(_amount.text.trim()),
-        paymentMode: _paymentMode,
-        paymentStatus: _paymentStatus,
+        paymentMode: _paymentMode.trim().isEmpty
+            ? 'CASH'
+            : _paymentMode.trim().toUpperCase(),
+        paymentStatus: _paymentStatus.trim().isEmpty
+            ? 'PAID'
+            : _paymentStatus.trim().toUpperCase(),
         memberStatus: _memberStatus,
       ),
     );
@@ -208,16 +230,19 @@ class _AddMemberViewState extends State<_AddMemberView> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final desktop = constraints.maxWidth >= 980;
+          final mobile = !desktop;
           final preview = _RegistrationPreview(
             name: _name.text.trim(),
             memberCode: _memberCode.text.trim(),
             phone: _phone.text.trim(),
             state: state,
             memberStatus: _memberStatus,
+            compact: mobile,
           );
           final form = _buildFormSections(state, submitting);
 
           return SingleChildScrollView(
+            controller: _scrollController,
             padding: EdgeInsets.fromLTRB(
               desktop ? 28 : 16,
               24,
@@ -238,7 +263,33 @@ class _AddMemberViewState extends State<_AddMemberView> {
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [preview, const SizedBox(height: 16), form],
+                        children: [
+                          _MobileFormNavigator(
+                            onSelect: (section) {
+                              switch (section) {
+                                case _MemberFormSection.identity:
+                                  _jumpToSection(_identityKey);
+                                  return;
+                                case _MemberFormSection.contact:
+                                  _jumpToSection(_contactKey);
+                                  return;
+                                case _MemberFormSection.fitness:
+                                  _jumpToSection(_fitnessKey);
+                                  return;
+                                case _MemberFormSection.membership:
+                                  _jumpToSection(_membershipKey);
+                                  return;
+                                case _MemberFormSection.payment:
+                                  _jumpToSection(_paymentKey);
+                                  return;
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          preview,
+                          const SizedBox(height: 16),
+                          form,
+                        ],
                       ),
               ),
             ),
@@ -256,240 +307,258 @@ class _AddMemberViewState extends State<_AddMemberView> {
           _MessageBox(message: state.message!),
           const SizedBox(height: 14),
         ],
-        _FormSection(
-          number: '01',
-          title: 'Identity',
-          subtitle: 'Basic membership identification',
-          icon: Icons.badge_outlined,
-          child: _ResponsiveFields(
-            children: [
-              _input(
-                _memberCode,
-                'Member Code',
-                icon: Icons.tag_rounded,
-                hint: 'Example: TF001',
-                validator: _required('Enter member code.'),
-              ),
-              _input(
-                _name,
-                'Name',
-                icon: Icons.person_outline_rounded,
-                hint: 'Full member name',
-                validator: _required('Enter member name.'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _FormSection(
-          number: '02',
-          title: 'Contact details',
-          subtitle: 'How the gym can reach this member',
-          icon: Icons.contact_phone_outlined,
-          child: _ResponsiveFields(
-            children: [
-              _input(
-                _phone,
-                'Phone Number',
-                icon: Icons.phone_outlined,
-                hint: '10-digit mobile number',
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  final phone = value?.replaceAll(RegExp(r'\D'), '') ?? '';
-                  return phone.length == 10
-                      ? null
-                      : 'Enter a valid 10-digit phone number.';
-                },
-              ),
-              _input(
-                _email,
-                'Email (optional)',
-                icon: Icons.alternate_email_rounded,
-                hint: 'Personal email address',
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isNotEmpty && !email.contains('@')) {
-                    return 'Enter a valid email address.';
-                  }
-                  return null;
-                },
-              ),
-              _input(
-                _address,
-                'Address',
-                icon: Icons.location_on_outlined,
-                hint: 'Residential address',
-                maxLines: 2,
-                fullWidth: true,
-                validator: _required('Enter address.'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _FormSection(
-          number: '03',
-          title: 'Fitness profile',
-          subtitle: 'Starting measurements for progress tracking',
-          icon: Icons.monitor_weight_outlined,
-          child: _ResponsiveFields(
-            children: [
-              _input(
-                _weight,
-                'Weight Kg',
-                icon: Icons.fitness_center_rounded,
-                hint: 'Example: 75',
-                suffixText: 'kg',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+        _SectionAnchor(
+          key: _identityKey,
+          child: _FormSection(
+            number: '01',
+            title: 'Identity',
+            subtitle: 'Basic membership identification',
+            icon: Icons.badge_outlined,
+            child: _ResponsiveFields(
+              children: [
+                _input(
+                  _memberCode,
+                  'Member Code',
+                  icon: Icons.tag_rounded,
+                  hint: 'Example: TF001',
+                  validator: _required('Enter member code.'),
                 ),
-                validator: _positiveNumber('Enter weight in Kg.'),
-              ),
-              _input(
-                _height,
-                'Height Cm',
-                icon: Icons.height_rounded,
-                hint: 'Example: 174',
-                suffixText: 'cm',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                validator: _positiveNumber('Enter height in Cm.'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _FormSection(
-          number: '04',
-          title: 'Membership plan',
-          subtitle: 'Choose plan and membership period',
-          icon: Icons.card_membership_rounded,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ResponsiveFields(
-                children: [
-                  _FieldSlot(
-                    child: DropdownButtonFormField<SubscriptionPlan>(
-                      initialValue: state.selectedPlan,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Subscription Plan',
-                        prefixIcon: Icon(Icons.workspace_premium_outlined),
-                      ),
-                      items: state.plans
-                          .map(
-                            (plan) => DropdownMenuItem(
-                              value: plan,
-                              child: Text(
-                                '${plan.name} (${plan.durationDays} days)',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: submitting ? null : _selectPlan,
-                      validator: (value) =>
-                          value == null ? 'Select a subscription plan.' : null,
-                    ),
-                  ),
-                  _FieldSlot(
-                    child: _DateField(
-                      label: 'Subscription Start Date',
-                      value: state.startDate,
-                      onTap: submitting ? null : () => _pickStartDate(state),
-                    ),
-                  ),
-                  _FieldSlot(
-                    child: _DateField(
-                      label: 'Subscription End Date',
-                      value: state.endDate,
-                    ),
-                  ),
-                  _dropdown(
-                    label: 'Member Status',
-                    value: _memberStatus,
-                    icon: Icons.toggle_on_outlined,
-                    options: const ['ACTIVE', 'INACTIVE'],
-                    onChanged: (value) {
-                      setState(() => _memberStatus = value);
-                    },
-                  ),
-                ],
-              ),
-              if (state.selectedPlan != null) ...[
-                const SizedBox(height: 14),
-                _SelectedPlanBanner(
-                  plan: state.selectedPlan!,
-                  startDate: state.startDate,
-                  endDate: state.endDate,
+                _input(
+                  _name,
+                  'Name',
+                  icon: Icons.person_outline_rounded,
+                  hint: 'Full member name',
+                  validator: _required('Enter member name.'),
                 ),
               ],
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 14),
-        _FormSection(
-          number: '05',
-          title: 'Payment and login',
-          subtitle: 'Receipt, collection and first-login access',
-          icon: Icons.payments_outlined,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ResponsiveFields(
-                children: [
-                  _input(
-                    _receiptNo,
-                    'Receipt No / Initial Password',
-                    icon: Icons.receipt_long_outlined,
-                    hint: 'Minimum 6 characters',
-                    validator: (value) {
-                      final receipt = value?.trim() ?? '';
-                      if (receipt.isEmpty) return 'Enter receipt number.';
-                      if (receipt.length < 6) {
-                        return 'Receipt number must be at least 6 characters.';
-                      }
-                      return null;
-                    },
+        _SectionAnchor(
+          key: _contactKey,
+          child: _FormSection(
+            number: '02',
+            title: 'Contact details',
+            subtitle: 'How the gym can reach this member',
+            icon: Icons.contact_phone_outlined,
+            child: _ResponsiveFields(
+              children: [
+                _input(
+                  _phone,
+                  'Phone Number',
+                  icon: Icons.phone_outlined,
+                  hint: '10-digit mobile number',
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (value) {
+                    final phone = value?.replaceAll(RegExp(r'\D'), '') ?? '';
+                    return phone.length == 10
+                        ? null
+                        : 'Enter a valid 10-digit phone number.';
+                  },
+                ),
+                _input(
+                  _email,
+                  'Email (optional)',
+                  icon: Icons.alternate_email_rounded,
+                  hint: 'Personal email address',
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    final email = value?.trim() ?? '';
+                    if (email.isNotEmpty && !email.contains('@')) {
+                      return 'Enter a valid email address.';
+                    }
+                    return null;
+                  },
+                ),
+                _input(
+                  _address,
+                  'Address',
+                  icon: Icons.location_on_outlined,
+                  hint: 'Residential address',
+                  maxLines: 2,
+                  fullWidth: true,
+                  validator: _required('Enter address.'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _SectionAnchor(
+          key: _fitnessKey,
+          child: _FormSection(
+            number: '03',
+            title: 'Fitness profile',
+            subtitle: 'Starting measurements for progress tracking',
+            icon: Icons.monitor_weight_outlined,
+            child: _ResponsiveFields(
+              children: [
+                _input(
+                  _weight,
+                  'Weight Kg',
+                  icon: Icons.fitness_center_rounded,
+                  hint: 'Example: 75',
+                  suffixText: 'kg',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
-                  _input(
-                    _amount,
-                    'Amount',
-                    icon: Icons.currency_rupee_rounded,
-                    hint: 'Plan amount',
-                    prefixText: 'Rs. ',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                  validator: _optionalPositiveNumber('Enter weight in Kg.'),
+                ),
+                _input(
+                  _height,
+                  'Height Cm',
+                  icon: Icons.height_rounded,
+                  hint: 'Example: 174',
+                  suffixText: 'cm',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: _optionalPositiveNumber('Enter height in Cm.'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _SectionAnchor(
+          key: _membershipKey,
+          child: _FormSection(
+            number: '04',
+            title: 'Membership plan',
+            subtitle: 'Choose plan and membership period',
+            icon: Icons.card_membership_rounded,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ResponsiveFields(
+                  children: [
+                    _FieldSlot(
+                      child: DropdownButtonFormField<SubscriptionPlan>(
+                        initialValue: state.selectedPlan,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Subscription Plan',
+                          prefixIcon: Icon(Icons.workspace_premium_outlined),
+                        ),
+                        items: state.plans
+                            .map(
+                              (plan) => DropdownMenuItem(
+                                value: plan,
+                                child: Text(
+                                  '${plan.name} (${plan.durationDays} days)',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: submitting ? null : _selectPlan,
+                        validator: (value) => value == null
+                            ? 'Select a subscription plan.'
+                            : null,
+                      ),
                     ),
-                    validator: _positiveNumber('Enter a valid amount.'),
-                  ),
-                  _dropdown(
-                    label: 'Payment Mode',
-                    value: _paymentMode,
-                    icon: Icons.account_balance_wallet_outlined,
-                    options: const ['CASH', 'UPI', 'CARD', 'BANK'],
-                    onChanged: (value) {
-                      setState(() => _paymentMode = value);
-                    },
-                  ),
-                  _dropdown(
-                    label: 'Payment Status',
-                    value: _paymentStatus,
-                    icon: Icons.verified_outlined,
-                    options: const ['PAID', 'PENDING'],
-                    onChanged: (value) {
-                      setState(() => _paymentStatus = value);
-                    },
+                    _FieldSlot(
+                      child: _DateField(
+                        label: 'Subscription Start Date',
+                        value: state.startDate,
+                        onTap: submitting ? null : () => _pickStartDate(state),
+                      ),
+                    ),
+                    _FieldSlot(
+                      child: _DateField(
+                        label: 'Subscription End Date',
+                        value: state.endDate,
+                      ),
+                    ),
+                    _dropdown(
+                      label: 'Member Status',
+                      value: _memberStatus,
+                      icon: Icons.toggle_on_outlined,
+                      options: const ['ACTIVE', 'INACTIVE'],
+                      onChanged: (value) {
+                        setState(() => _memberStatus = value);
+                      },
+                    ),
+                  ],
+                ),
+                if (state.selectedPlan != null) ...[
+                  const SizedBox(height: 14),
+                  _SelectedPlanBanner(
+                    plan: state.selectedPlan!,
+                    startDate: state.startDate,
+                    endDate: state.endDate,
                   ),
                 ],
-              ),
-              const SizedBox(height: 14),
-              const _LoginNotice(),
-            ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _SectionAnchor(
+          key: _paymentKey,
+          child: _FormSection(
+            number: '05',
+            title: 'Payment and login',
+            subtitle: 'Receipt, collection and first-login access',
+            icon: Icons.payments_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ResponsiveFields(
+                  children: [
+                    _input(
+                      _receiptNo,
+                      'Receipt No / Initial Password',
+                      icon: Icons.receipt_long_outlined,
+                      hint: 'Minimum 6 characters',
+                      validator: (value) {
+                        final receipt = value?.trim() ?? '';
+                        if (receipt.isEmpty) return 'Enter receipt number.';
+                        if (receipt.length < 6) {
+                          return 'Receipt number must be at least 6 characters.';
+                        }
+                        return null;
+                      },
+                    ),
+                    _input(
+                      _amount,
+                      'Amount',
+                      icon: Icons.currency_rupee_rounded,
+                      hint: 'Plan amount',
+                      prefixText: 'Rs. ',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: _positiveNumber('Enter a valid amount.'),
+                    ),
+                    _dropdown(
+                      label: 'Payment Mode',
+                      value: _paymentMode,
+                      icon: Icons.account_balance_wallet_outlined,
+                      options: const ['CASH', 'UPI', 'CARD', 'BANK'],
+                      onChanged: (value) {
+                        setState(() => _paymentMode = value);
+                      },
+                      validator: _required('Select payment mode.'),
+                    ),
+                    _dropdown(
+                      label: 'Payment Status',
+                      value: _paymentStatus,
+                      icon: Icons.verified_outlined,
+                      options: const ['PAID', 'PENDING'],
+                      onChanged: (value) {
+                        setState(() => _paymentStatus = value);
+                      },
+                      validator: _required('Select payment status.'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const _LoginNotice(),
+              ],
+            ),
           ),
         ),
       ],
@@ -534,6 +603,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
     required IconData icon,
     required List<String> options,
     required ValueChanged<String> onChanged,
+    String? Function(String?)? validator,
   }) {
     return _FieldSlot(
       child: DropdownButtonFormField<String>(
@@ -546,6 +616,7 @@ class _AddMemberViewState extends State<_AddMemberView> {
         onChanged: (item) {
           if (item != null) onChanged(item);
         },
+        validator: validator,
       ),
     );
   }
@@ -557,6 +628,15 @@ class _AddMemberViewState extends State<_AddMemberView> {
   String? Function(String?) _positiveNumber(String message) {
     return (value) {
       final number = double.tryParse(value?.trim() ?? '');
+      return number == null || number <= 0 ? message : null;
+    };
+  }
+
+  String? Function(String?) _optionalPositiveNumber(String message) {
+    return (value) {
+      final text = value?.trim() ?? '';
+      if (text.isEmpty) return null;
+      final number = double.tryParse(text);
       return number == null || number <= 0 ? message : null;
     };
   }
@@ -599,6 +679,80 @@ class _SecureBadge extends StatelessWidget {
   }
 }
 
+enum _MemberFormSection { identity, contact, fitness, membership, payment }
+
+class _MobileFormNavigator extends StatelessWidget {
+  const _MobileFormNavigator({required this.onSelect});
+
+  final ValueChanged<_MemberFormSection> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (_MemberFormSection.identity, 'Identity', Icons.badge_outlined),
+      (_MemberFormSection.contact, 'Contact', Icons.phone_outlined),
+      (_MemberFormSection.fitness, 'Fitness', Icons.monitor_weight_outlined),
+      (
+        _MemberFormSection.membership,
+        'Plan',
+        Icons.card_membership_rounded,
+      ),
+      (_MemberFormSection.payment, 'Payment', Icons.payments_outlined),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _card,
+        border: Border.all(color: _fieldBorder),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'QUICK JUMP',
+            style: TextStyle(
+              color: AppColors.red,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.05,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Jump directly to any section while filling the member form on mobile.',
+            style: TextStyle(color: _muted, fontSize: 11, height: 1.45),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final item in items) ...[
+                  ActionChip(
+                    onPressed: () => onSelect(item.$1),
+                    avatar: Icon(item.$3, color: AppColors.red, size: 16),
+                    label: Text(item.$2.toUpperCase()),
+                    backgroundColor: _fieldFill,
+                    side: const BorderSide(color: _fieldBorder),
+                    labelStyle: const TextStyle(
+                      color: _text,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RegistrationPreview extends StatelessWidget {
   const _RegistrationPreview({
     required this.name,
@@ -606,6 +760,7 @@ class _RegistrationPreview extends StatelessWidget {
     required this.phone,
     required this.state,
     required this.memberStatus,
+    this.compact = false,
   });
 
   final String name;
@@ -613,6 +768,7 @@ class _RegistrationPreview extends StatelessWidget {
   final String phone;
   final AddMemberState state;
   final String memberStatus;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -636,7 +792,7 @@ class _RegistrationPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.all(22),
+            padding: EdgeInsets.all(compact ? 18 : 22),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -661,10 +817,10 @@ class _RegistrationPreview extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 26),
+                SizedBox(height: compact ? 18 : 26),
                 Container(
-                  width: 62,
-                  height: 62,
+                  width: compact ? 54 : 62,
+                  height: compact ? 54 : 62,
                   decoration: BoxDecoration(
                     color: AppColors.red,
                     borderRadius: BorderRadius.circular(16),
@@ -679,7 +835,7 @@ class _RegistrationPreview extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: compact ? 14 : 18),
                 const Text(
                   'NEW GYM MEMBER',
                   style: TextStyle(
@@ -698,7 +854,7 @@ class _RegistrationPreview extends StatelessWidget {
                     color: name.isEmpty
                         ? const Color(0xFF777C82)
                         : Colors.white,
-                    fontSize: 24,
+                    fontSize: compact ? 20 : 24,
                     height: 1.08,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
@@ -727,7 +883,7 @@ class _RegistrationPreview extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(compact ? 16 : 18),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.055),
               borderRadius: const BorderRadius.vertical(
@@ -752,12 +908,46 @@ class _RegistrationPreview extends StatelessWidget {
               ],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 18, 20, 22),
-            child: _RegistrationSteps(),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, compact ? 14 : 18, 20, 22),
+            child: compact
+                ? const _CompactRegistrationSteps()
+                : const _RegistrationSteps(),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CompactRegistrationSteps extends StatelessWidget {
+  const _CompactRegistrationSteps();
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['Identity', 'Contact', 'Fitness', 'Plan', 'Payment'];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final label in labels)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFFB4B8BD),
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -864,6 +1054,15 @@ class _RegistrationSteps extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SectionAnchor extends StatelessWidget {
+  const _SectionAnchor({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
 }
 
 class _FormSection extends StatelessWidget {
@@ -1176,59 +1375,105 @@ class _ActionBar extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            if (!compact)
-              const Expanded(
-                child: Text(
-                  'Review all details before creating the member account.',
-                  style: TextStyle(color: _muted, fontSize: 11),
-                ),
-              )
-            else
-              const Spacer(),
-            TextButton(
-              onPressed: submitting ? null : onCancel,
-              style: TextButton.styleFrom(foregroundColor: _muted),
-              child: const Text(
-                'CANCEL',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: submitting ? null : onSubmit,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.red,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 16 : 24,
-                  vertical: 15,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
-                ),
-              ),
-              icon: submitting
-                  ? const SizedBox.square(
-                      dimension: 17,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+        child: compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Review the form, then create the member account.',
+                    style: TextStyle(color: _muted, fontSize: 11, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: submitting ? null : onSubmit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
                       ),
-                    )
-                  : const Icon(Icons.person_add_alt_1_rounded, size: 18),
-              label: Text(
-                submitting ? 'CREATING...' : 'CREATE MEMBER',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
+                    ),
+                    icon: submitting
+                        ? const SizedBox.square(
+                            dimension: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                    label: Text(
+                      submitting ? 'CREATING...' : 'CREATE MEMBER',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: submitting ? null : onCancel,
+                    style: TextButton.styleFrom(foregroundColor: _muted),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Review all details before creating the member account.',
+                      style: TextStyle(color: _muted, fontSize: 11),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: submitting ? null : onCancel,
+                    style: TextButton.styleFrom(foregroundColor: _muted),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: submitting ? null : onSubmit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 15,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
+                    icon: submitting
+                        ? const SizedBox.square(
+                            dimension: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                    label: Text(
+                      submitting ? 'CREATING...' : 'CREATE MEMBER',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1314,6 +1559,12 @@ String _numberText(double value) {
   return value == value.roundToDouble()
       ? value.toStringAsFixed(0)
       : value.toStringAsFixed(2);
+}
+
+double? _nullableNumber(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return null;
+  return double.tryParse(text);
 }
 
 String _initials(String name) {

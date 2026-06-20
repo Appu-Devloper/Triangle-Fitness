@@ -9,7 +9,6 @@ import 'package:triangle_fitness/features/auth/presentation/pages/members_list_p
 import 'package:triangle_fitness/features/auth/presentation/pages/payments_list_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/settings_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/subscriptions_management_page.dart';
-import 'package:triangle_fitness/features/auth/presentation/pages/transformations_management_page.dart';
 import 'package:triangle_fitness/features/auth/presentation/widgets/admin_workspace.dart';
 
 const _workspace = AdminWorkspaceColors.background;
@@ -142,13 +141,6 @@ class _DashboardContent extends StatelessWidget {
         caption: _formatCurrency(dashboard.totalPaymentAmount),
         icon: Icons.account_balance_wallet_rounded,
         color: _warning,
-      ),
-      _AdminStat(
-        label: 'TRANSFORMATIONS',
-        value: dashboard.totalTransformations.toString(),
-        caption: 'Published stories',
-        icon: Icons.insights_rounded,
-        color: const Color(0xFF7B4BC7),
       ),
     ];
 
@@ -919,7 +911,6 @@ const _adminActions = [
   _AdminAction('Add Member', Icons.person_add_alt_1_rounded),
   _AdminAction('Payments', Icons.payments_rounded),
   _AdminAction('Subscriptions', Icons.card_membership_rounded),
-  _AdminAction('Transformations', Icons.insights_rounded),
   _AdminAction('Settings', Icons.settings_rounded),
 ];
 
@@ -972,14 +963,6 @@ Future<void> _openSection(BuildContext context, String title) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const SubscriptionsManagementPage(),
-      ),
-    );
-    return;
-  }
-  if (title == 'Transformations') {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const TransformationsManagementPage(),
       ),
     );
     return;

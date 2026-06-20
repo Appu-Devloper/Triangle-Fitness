@@ -75,11 +75,6 @@ void main() {
     expect(find.text('₹1196'), findsOneWidget);
     expect(find.text('PLAN PRICE'), findsOneWidget);
     expect(find.text('CHOOSE PLAN'), findsOneWidget);
-    expect(find.text('Stronger in 12 weeks'), findsOneWidget);
-    expect(find.text('92 kg'), findsOneWidget);
-    expect(find.text('80 kg'), findsOneWidget);
-    expect(find.text('-12 kg'), findsOneWidget);
-    expect(find.text('ACHIEVED IN'), findsOneWidget);
     expect(find.text('OPENING HOURS'), findsOneWidget);
     expect(find.text('5:00 AM - 10:00 PM'), findsOneWidget);
     expect(find.text('EMAIL'), findsNothing);
@@ -104,7 +99,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No plans available'), findsOneWidget);
-    expect(find.text('No transformations available'), findsOneWidget);
+    expect(find.text('TRANSFORMATIONS'), findsNothing);
   });
 }
 

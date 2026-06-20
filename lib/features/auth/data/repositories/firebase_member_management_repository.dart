@@ -140,6 +140,8 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       final serverTimestamp = FieldValue.serverTimestamp();
       final startTimestamp = Timestamp.fromDate(request.startDate);
       final endTimestamp = Timestamp.fromDate(request.endDate);
+      final paymentMode = _paymentMode(request.paymentMode);
+      final paymentStatus = _paymentStatus(request.paymentStatus);
 
       batch.set(memberReference, {
         'uid': memberUid,
@@ -158,7 +160,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
           'endDate': endTimestamp,
           'status': 'ACTIVE',
           'amount': request.amount,
-          'paymentStatus': request.paymentStatus,
+          'paymentStatus': paymentStatus,
         },
         'status': request.memberStatus,
         'createdBy': adminUid,
@@ -187,8 +189,8 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
         'phone': phone,
         'receiptNo': request.receiptNo,
         'amount': request.amount,
-        'paymentMode': request.paymentMode,
-        'paymentStatus': request.paymentStatus,
+        'paymentMode': paymentMode,
+        'paymentStatus': paymentStatus,
         'paymentDate': serverTimestamp,
         'subscriptionStartDate': startTimestamp,
         'subscriptionEndDate': endTimestamp,
@@ -267,7 +269,7 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
       subscriptionAmount: _nullableNumber(subscription['amount']),
       paymentStatus: _text(
         subscription['paymentStatus'],
-        fallback: 'Not available',
+        fallback: 'PAID',
       ),
       status: _text(data['status'], fallback: 'INACTIVE').toUpperCase(),
     );
@@ -351,5 +353,15 @@ class FirebaseMemberManagementRepository implements MemberManagementRepository {
   void _logError(String operation, Object error, StackTrace stackTrace) {
     debugPrint('$operation Firebase error: $error');
     debugPrintStack(stackTrace: stackTrace);
+  }
+
+  String _paymentMode(Object? value) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    return text.isEmpty ? 'CASH' : text;
+  }
+
+  String _paymentStatus(Object? value) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    return text.isEmpty ? 'PAID' : text;
   }
 }

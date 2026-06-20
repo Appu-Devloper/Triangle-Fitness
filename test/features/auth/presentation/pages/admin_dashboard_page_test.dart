@@ -26,7 +26,7 @@ void main() {
     expect(find.text('ACTIVE MEMBERS'), findsOneWidget);
     expect(find.text('EXPIRED MEMBERS'), findsOneWidget);
     expect(find.text('TOTAL PAYMENTS'), findsOneWidget);
-    expect(find.text('TRANSFORMATIONS'), findsNWidgets(2));
+    expect(find.text('TRANSFORMATIONS'), findsNothing);
     expect(find.text('MEMBERS'), findsOneWidget);
     expect(find.text('ADD MEMBER'), findsOneWidget);
     expect(find.text('PAYMENTS'), findsOneWidget);
@@ -70,6 +70,7 @@ void main() {
     expect(find.text('Welcome, Nandhi Admin'), findsOneWidget);
     expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
     expect(find.text('TOTAL MEMBERS'), findsOneWidget);
+    expect(find.byKey(const ValueKey('admin-mobile-tab-overview')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

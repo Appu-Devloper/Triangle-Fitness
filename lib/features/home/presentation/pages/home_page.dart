@@ -199,9 +199,6 @@ class _HomePageState extends State<HomePage> {
                         SubscriptionPlansSection(
                           plans: content.subscriptionPlans,
                         ),
-                        TransformationsSection(
-                          transformations: content.transformations,
-                        ),
                         KeyedSubtree(
                           key: _equipmentKey,
                           child: EquipmentSection(equipment: content.equipment),

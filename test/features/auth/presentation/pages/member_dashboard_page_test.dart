@@ -106,17 +106,57 @@ void main() {
     expect(find.text('PENDING'), findsOneWidget);
     expect(find.text('SUBSCRIPTION PERIOD'), findsOneWidget);
   });
+
+  testWidgets('shows Not added for missing weight and height', (tester) async {
+    await tester.pumpWidget(
+      RepositoryProvider<AuthRepository>.value(
+        value: _PageRepository(
+          dashboardOverride: const MemberDashboard(
+            memberId: 'member-2',
+            memberCode: 'TF002',
+            name: 'Meera',
+            phone: '9000000000',
+            email: '',
+            address: 'KRS Road',
+            receiptNo: 'R2002',
+            weight: 'Not added',
+            height: 'Not added',
+            status: 'Active',
+            planName: 'Gold Monthly',
+            amount: '1500',
+            paymentStatus: 'PAID',
+            subscriptionStatus: 'Active',
+            startDate: null,
+            endDate: null,
+          ),
+        ),
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const MemberDashboardPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not added'), findsNWidgets(2));
+  });
 }
 
 class _PageRepository implements AuthRepository {
-  _PageRepository({this.loadFailure, this.includePayment = false});
+  _PageRepository({
+    this.loadFailure,
+    this.includePayment = false,
+    this.dashboardOverride,
+  });
 
   final AuthFailure? loadFailure;
   final bool includePayment;
+  final MemberDashboard? dashboardOverride;
 
   @override
   Future<MemberDashboard> getCurrentMemberDashboard() async {
     if (loadFailure case final failure?) throw failure;
+    if (dashboardOverride case final dashboard?) return dashboard;
     final now = DateTime.now();
     return MemberDashboard(
       memberId: 'member-1',

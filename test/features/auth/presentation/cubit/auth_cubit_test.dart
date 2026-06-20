@@ -19,6 +19,7 @@ void main() {
     expect(FirebaseAuthRepository.measurementDisplay(75, 'kg'), '75 kg');
     expect(FirebaseAuthRepository.measurementDisplay(174, 'cm'), '174 cm');
     expect(FirebaseAuthRepository.measurementDisplay('72 kg', 'kg'), '72 kg');
+    expect(FirebaseAuthRepository.measurementDisplay(null, 'kg'), 'Not added');
   });
 
   blocTest<AuthCubit, AuthState>(

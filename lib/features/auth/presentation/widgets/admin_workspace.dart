@@ -225,6 +225,12 @@ class AdminWorkspaceScaffold extends StatelessWidget {
                         onSignOut: onSignOut,
                         signingOut: signingOut,
                       ),
+                      if (!desktop)
+                        _MobileWorkspaceTabs(
+                          selected: section,
+                          onSelected: (destination) =>
+                              _navigate(context, destination),
+                        ),
                       Expanded(child: body),
                       if (bottomNavigationBar != null) bottomNavigationBar!,
                     ],
@@ -234,6 +240,73 @@ class AdminWorkspaceScaffold extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _MobileWorkspaceTabs extends StatelessWidget {
+  const _MobileWorkspaceTabs({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final AdminWorkspaceSection selected;
+  final ValueChanged<AdminWorkspaceSection> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const sections = [
+      AdminWorkspaceSection.overview,
+      AdminWorkspaceSection.members,
+      AdminWorkspaceSection.addMember,
+      AdminWorkspaceSection.payments,
+      AdminWorkspaceSection.subscriptions,
+      AdminWorkspaceSection.settings,
+    ];
+    return Container(
+      height: 58,
+      decoration: const BoxDecoration(
+        color: AdminWorkspaceColors.surface,
+        border: Border(bottom: BorderSide(color: AdminWorkspaceColors.border)),
+      ),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) {
+          final destination = sections[index];
+          final active = destination == selected;
+          return ChoiceChip(
+            key: ValueKey('admin-mobile-tab-${destination.name}'),
+            avatar: Icon(
+              destination.icon,
+              size: 16,
+              color: active
+                  ? Colors.white
+                  : AdminWorkspaceColors.muted,
+            ),
+            label: Text(destination.label.toUpperCase()),
+            selected: active,
+            onSelected: (_) => onSelected(destination),
+            selectedColor: AdminWorkspaceColors.accent,
+            backgroundColor: AdminWorkspaceColors.field,
+            side: BorderSide(
+              color: active
+                  ? AdminWorkspaceColors.accent
+                  : AdminWorkspaceColors.border,
+            ),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : AdminWorkspaceColors.text,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.45,
+            ),
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: sections.length,
       ),
     );
   }
@@ -256,6 +329,14 @@ class _WorkspaceNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const navigationSections = [
+      AdminWorkspaceSection.overview,
+      AdminWorkspaceSection.members,
+      AdminWorkspaceSection.addMember,
+      AdminWorkspaceSection.payments,
+      AdminWorkspaceSection.subscriptions,
+      AdminWorkspaceSection.settings,
+    ];
     return SafeArea(
       child: Container(
         decoration: const BoxDecoration(
@@ -322,7 +403,7 @@ class _WorkspaceNavigation extends StatelessWidget {
                 ),
               ),
             ),
-            for (final destination in AdminWorkspaceSection.values)
+            for (final destination in navigationSections)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: _NavigationItem(

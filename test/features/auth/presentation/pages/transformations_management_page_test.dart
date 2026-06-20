@@ -95,7 +95,7 @@ List<TransformationRecord> _records() {
       description: 'Consistent training result number $index.',
       weightBeforeKg: 90 - index.toDouble(),
       weightAfterKg: 80 - index.toDouble(),
-      heightCm: 170 + index.toDouble(),
+      heightCm: index.isEven ? 170 + index.toDouble() : null,
       durationText: '12 weeks',
       isPublished: index.isEven,
       displayOrder: index,

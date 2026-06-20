@@ -77,8 +77,8 @@ class _EditMemberPageState extends State<EditMemberPage> {
           .collection('members')
           .doc(widget.memberId);
 
-      final weight = double.tryParse(_weight.text.trim());
-      final height = double.tryParse(_height.text.trim());
+      final weight = _nullableNumber(_weight.text);
+      final height = _nullableNumber(_height.text);
 
       await memberRef.update({
         'memberCode': _memberCode.text.trim(),
@@ -321,6 +321,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           'Weight Kg',
                           Icons.fitness_center_rounded,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: _optionalPositiveNumber('Enter a valid weight in Kg.'),
                         ),
                       ),
                       _FieldSlot(
@@ -329,6 +330,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
                           'Height Cm',
                           Icons.height_rounded,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: _optionalPositiveNumber('Enter a valid height in Cm.'),
                         ),
                       ),
                     ],
@@ -417,6 +419,21 @@ class _EditMemberPageState extends State<EditMemberPage> {
       validator: validator,
     );
   }
+}
+
+String? Function(String?) _optionalPositiveNumber(String message) {
+  return (value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final number = double.tryParse(text);
+    return number == null || number <= 0 ? message : null;
+  };
+}
+
+double? _nullableNumber(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return null;
+  return double.tryParse(text);
 }
 
 class _FormSection extends StatelessWidget {

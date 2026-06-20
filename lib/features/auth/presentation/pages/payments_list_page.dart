@@ -37,6 +37,11 @@ class PaymentRecord {
     QueryDocumentSnapshot<Map<String, dynamic>> document,
   ) {
     final data = document.data();
+    final paymentMode = _normalizedValue(data['paymentMode'], fallback: 'CASH');
+    final paymentStatus = _normalizedValue(
+      data['paymentStatus'],
+      fallback: 'PAID',
+    );
     return PaymentRecord(
       id: document.id,
       receiptNo: _text(data['receiptNo']),
@@ -44,8 +49,8 @@ class PaymentRecord {
       memberName: _text(data['memberName']),
       phone: _text(data['phone']),
       amount: _amount(data['amount']),
-      paymentMode: _text(data['paymentMode']).toUpperCase(),
-      paymentStatus: _text(data['paymentStatus']).toUpperCase(),
+      paymentMode: paymentMode,
+      paymentStatus: paymentStatus,
       paymentDate: _date(data['paymentDate']),
       subscriptionStartDate: _date(data['subscriptionStartDate']),
       subscriptionEndDate: _date(data['subscriptionEndDate']),
@@ -65,6 +70,11 @@ class PaymentRecord {
   final DateTime? subscriptionEndDate;
 
   static String _text(Object? value) => value?.toString().trim() ?? '';
+
+  static String _normalizedValue(Object? value, {required String fallback}) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
 
   static double _amount(Object? value) {
     if (value is num) return value.toDouble();

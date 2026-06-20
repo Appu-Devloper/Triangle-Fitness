@@ -433,7 +433,7 @@ String _fallback(String value) =>
     value.trim().isEmpty ? 'Not available' : value;
 
 String _measurement(double? value, String unit) {
-  return value == null ? 'Not available' : '${_number(value)} $unit';
+  return value == null ? 'Not added' : '${_number(value)} $unit';
 }
 
 String _number(double value) {

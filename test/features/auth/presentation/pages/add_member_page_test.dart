@@ -77,6 +77,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('NEW GYM MEMBER'), findsOneWidget);
+    expect(find.text('QUICK JUMP'), findsOneWidget);
     expect(find.text('Member Code'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -143,6 +144,64 @@ void main() {
 
     expect(repository.createdRequest, isNotNull);
     expect(find.text('Member created successfully'), findsOneWidget);
+  });
+
+  testWidgets('submits null measurements and default payment values', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _PageRepository();
+    await tester.pumpWidget(
+      RepositoryProvider<MemberManagementRepository>.value(
+        value: repository,
+        child: const MaterialApp(home: AddMemberPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Member Code'),
+      'TF002',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Name'),
+      'Optional Member',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Phone Number'),
+      '9123456789',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Address'),
+      'KRS Road',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Receipt No / Initial Password'),
+      'REC002',
+    );
+
+    final planDropdown = find.byType(DropdownButtonFormField<SubscriptionPlan>);
+    await tester.ensureVisible(planDropdown);
+    await tester.tap(planDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gold Monthly (30 days)').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select date').first);
+    await tester.tap(find.text('Select date').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('CREATE MEMBER'));
+    await tester.tap(find.text('CREATE MEMBER'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdRequest, isNotNull);
+    expect(repository.createdRequest?.weightKg, isNull);
+    expect(repository.createdRequest?.heightCm, isNull);
+    expect(repository.createdRequest?.paymentMode, 'CASH');
+    expect(repository.createdRequest?.paymentStatus, 'PAID');
   });
 }
 

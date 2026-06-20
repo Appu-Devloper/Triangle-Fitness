@@ -13,29 +13,35 @@ void main() {
     await _pumpPage(tester, _AdminPageRepository());
 
     expect(find.text('Admin Login'), findsOneWidget);
-    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Admin Email'), findsOneWidget);
+    expect(find.text('trianglefitness.krs@gmail.com'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('ADMIN LOGIN'), findsOneWidget);
     expect(find.byTooltip('Back to Home'), findsOneWidget);
   });
 
   testWidgets('shows Admin access denied inline', (tester) async {
+    final repository = _AdminPageRepository(
+      adminFailure: const AuthFailure('Admin access denied'),
+    );
     await _pumpPage(
       tester,
-      _AdminPageRepository(
-        adminFailure: const AuthFailure('Admin access denied'),
-      ),
+      repository,
     );
 
     final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), 'admin@trianglefitness.com');
-    await tester.enterText(fields.at(1), 'password');
+    await tester.enterText(fields.at(0), 'password');
     await tester.ensureVisible(find.text('ADMIN LOGIN'));
     await tester.tap(find.text('ADMIN LOGIN'));
     await tester.pumpAndSettle();
 
     expect(find.text('Admin access denied'), findsOneWidget);
     expect(find.byKey(const Key('admin-login-error')), findsOneWidget);
+    expect(
+      repository.capturedEmail,
+      'trianglefitness.krs@gmail.com',
+    );
+    expect(repository.capturedPassword, 'password');
   });
 
   testWidgets('shows the full Firebase error code and message inline', (
@@ -51,8 +57,7 @@ void main() {
     );
 
     final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), 'admin@trianglefitness.com');
-    await tester.enterText(fields.at(1), 'password');
+    await tester.enterText(fields.at(0), 'password');
     await tester.ensureVisible(find.text('ADMIN LOGIN'));
     await tester.tap(find.text('ADMIN LOGIN'));
     await tester.pumpAndSettle();
@@ -81,12 +86,16 @@ class _AdminPageRepository implements AuthRepository {
   _AdminPageRepository({this.adminFailure});
 
   final AuthFailure? adminFailure;
+  String? capturedEmail;
+  String? capturedPassword;
 
   @override
   Future<void> signInAdmin({
     required String email,
     required String password,
   }) async {
+    capturedEmail = email;
+    capturedPassword = password;
     if (adminFailure case final failure?) throw failure;
   }
 
