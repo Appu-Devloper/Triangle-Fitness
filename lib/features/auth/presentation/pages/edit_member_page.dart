@@ -129,8 +129,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
 
   @override
   void dispose() {
-    _memberCode.removeListener(_normalizeMemberCodeField);
-    _receiptNo.removeListener(_normalizeReceiptNoField);
     _memberCode.dispose();
     _name.dispose();
     _phone.dispose();
