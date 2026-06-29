@@ -35,6 +35,21 @@ jobs:
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRIANGLE_FITNESS }}' > firebase-service-account.json
 
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools@15.22.3 deploy --only hosting --project triangle-fitness --non-interactive
+        run: |
+          set +e
+          npx firebase-tools@15.22.3 deploy --only hosting --project triangle-fitness --non-interactive 2>&1 | tee firebase-deploy.log
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          if grep -q "supplied version .* is the current active version" firebase-deploy.log; then
+            echo "Firebase Hosting already has this version active; treating deploy as successful."
+            exit 0
+          fi
+
+          exit "$status"
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-service-account.json
