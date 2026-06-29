@@ -18,3 +18,4 @@
           fi
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-service-account.json
+          #
