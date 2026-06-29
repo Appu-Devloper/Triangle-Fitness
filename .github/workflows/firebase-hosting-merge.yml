@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -26,10 +27,11 @@ jobs:
       - name: Build Flutter web
         run: flutter build web --release
 
+      - name: Create Firebase service account file
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRIANGLE_FITNESS }}' > firebase-service-account.json
+
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRIANGLE_FITNESS }}'
-          channelId: live
-          projectId: triangle-fitness
+        run: npx firebase-tools@15.22.3 deploy --only hosting --project triangle-fitness
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-service-account.json
