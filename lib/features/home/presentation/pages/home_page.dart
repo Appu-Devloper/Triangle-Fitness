@@ -219,7 +219,8 @@ class _HomePageState extends State<HomePage> {
                                 _open(ExternalAction.directions),
                             onCall: () => _open(ExternalAction.call),
                             onWhatsApp: () => _open(ExternalAction.whatsapp),
-                            onInstagram: () => _openUrl(content.profile.instagramUrl),
+                            onInstagram: () =>
+                                _openUrl(content.profile.instagramUrl),
                           ),
                         ),
                         const SiteFooter(),
@@ -1419,6 +1420,7 @@ class EquipmentSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final groups = _equipmentGroups(equipment);
     return SectionShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1438,21 +1440,280 @@ class EquipmentSection extends StatelessWidget {
                   ? 2
                   : 1;
               return GridView.builder(
-                itemCount: equipment.length,
+                itemCount: groups.length,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: count,
                   crossAxisSpacing: 18,
                   mainAxisSpacing: 18,
-                  childAspectRatio: count == 1 ? 0.92 : 0.84,
+                  childAspectRatio: count == 1 ? 1.05 : 0.9,
                 ),
                 itemBuilder: (context, index) =>
-                    EquipmentCard(equipment: equipment[index]),
+                    _EquipmentGroupCard(group: groups[index]),
               );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EquipmentGroup {
+  const _EquipmentGroup({
+    required this.title,
+    required this.category,
+    required this.description,
+    required this.items,
+  });
+
+  final String title;
+  final String category;
+  final String description;
+  final List<Equipment> items;
+}
+
+List<_EquipmentGroup> _equipmentGroups(List<Equipment> equipment) {
+  List<Equipment> where(bool Function(Equipment equipment) test) =>
+      equipment.where(test).toList();
+
+  final groups = [
+    _EquipmentGroup(
+      title: 'Cardio Zone',
+      category: 'CARDIO',
+      description:
+          'Treadmills, bikes and elliptical training for endurance and low-impact conditioning.',
+      items: where((item) => item.category == 'CARDIO'),
+    ),
+    _EquipmentGroup(
+      title: 'Strength Machines',
+      category: 'PIN LOADED',
+      description:
+          'Guided machines for chest, back, shoulders, arms and lower-body isolation.',
+      items: where((item) => item.category == 'PIN LOADED'),
+    ),
+    _EquipmentGroup(
+      title: 'Free Weights',
+      category: 'FREE WEIGHTS',
+      description:
+          'Dumbbells, plates, benches and rack work for serious strength training.',
+      items: where((item) => item.category == 'FREE WEIGHTS'),
+    ),
+    _EquipmentGroup(
+      title: 'Plate Loaded & Core',
+      category: 'PLATE LOADED',
+      description:
+          'Heavy plate-loaded equipment and core stations for focused power work.',
+      items: where(
+        (item) =>
+            item.category == 'PLATE LOADED' || item.category == 'BODYWEIGHT',
+      ),
+    ),
+  ];
+
+  return groups.where((group) => group.items.isNotEmpty).toList();
+}
+
+class _EquipmentGroupCard extends StatefulWidget {
+  const _EquipmentGroupCard({required this.group});
+
+  final _EquipmentGroup group;
+
+  @override
+  State<_EquipmentGroupCard> createState() => _EquipmentGroupCardState();
+}
+
+class _EquipmentGroupCardState extends State<_EquipmentGroupCard> {
+  bool hovered = false;
+
+  void _openGroup() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _EquipmentGroupPage(group: widget.group),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final previewItems = widget.group.items.take(4).toList();
+    return MouseRegion(
+      onEnter: (_) => setState(() => hovered = true),
+      onExit: (_) => setState(() => hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, hovered ? -5 : 0, 0),
+        decoration: BoxDecoration(
+          color: _surface,
+          border: Border.all(color: hovered ? _red : const Color(0xFF292C2F)),
+          boxShadow: hovered
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : null,
+        ),
+        child: InkWell(
+          onTap: _openGroup,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 7,
+                child: Container(
+                  color: const Color(0xFFEAE8E3),
+                  padding: const EdgeInsets.all(10),
+                  child: GridView.builder(
+                    itemCount: previewItems.length,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                    itemBuilder: (context, index) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          previewItems[index].image,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.group.category,
+                        style: const TextStyle(
+                          color: _red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Text(
+                        widget.group.title.toUpperCase(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          height: 1.12,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: Text(
+                          widget.group.description,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: _muted, height: 1.45),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            '${widget.group.items.length} ITEMS',
+                            style: const TextStyle(
+                              color: _muted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const Spacer(),
+                          const Icon(
+                            Icons.arrow_forward,
+                            color: _red,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EquipmentGroupPage extends StatelessWidget {
+  const _EquipmentGroupPage({required this.group});
+
+  final _EquipmentGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _ink,
+      appBar: AppBar(
+        backgroundColor: _ink,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: _paper,
+        title: Text(
+          group.title.toUpperCase(),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: SectionShell(
+          verticalPadding: 42,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionHeading(
+                eyebrow: group.category,
+                title: group.title.toUpperCase(),
+                description: group.description,
+              ),
+              const SizedBox(height: 34),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = constraints.maxWidth >= 1050
+                      ? 3
+                      : constraints.maxWidth >= 650
+                      ? 2
+                      : 1;
+                  return GridView.builder(
+                    itemCount: group.items.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: count,
+                      crossAxisSpacing: 18,
+                      mainAxisSpacing: 18,
+                      childAspectRatio: count == 1 ? 0.92 : 0.84,
+                    ),
+                    itemBuilder: (context, index) =>
+                        EquipmentCard(equipment: group.items[index]),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

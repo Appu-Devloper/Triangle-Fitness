@@ -251,5 +251,145 @@ const _baseContent = GymContent(
         'Net weight: 221 kg',
       ],
     ),
+    Equipment(
+      name: 'Abdominal Machine Plate',
+      category: 'PLATE LOADED',
+      image: 'assets/NewEquip/ABDOMINAL-Machine-Plate.png',
+      description:
+          'Plate-loaded abdominal station for controlled core flexion and progressive resistance training.',
+      specs: ['Adjustable resistance', 'Core isolation', 'Commercial frame'],
+    ),
+    Equipment(
+      name: 'Adjustable Olympic Dumbbells',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/adjustableolympic.png',
+      description:
+          'Space-saving adjustable Olympic dumbbells for strength work across multiple training loads.',
+      specs: ['Adjustable loading', 'Olympic plate compatible', 'Knurled grip'],
+    ),
+    Equipment(
+      name: 'Dumbbells',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/dumbells.png',
+      description:
+          'Versatile dumbbell set for presses, rows, curls, raises and full-body accessory training.',
+      specs: [
+        'Multiple weight options',
+        'Strength and accessory work',
+        'Easy-grip handles',
+      ],
+    ),
+    Equipment(
+      name: 'Elliptical Trainer',
+      category: 'CARDIO',
+      image: 'assets/NewEquip/elliptical_trainer.jpg',
+      description:
+          'Low-impact cardio trainer for smooth endurance sessions with reduced joint stress.',
+      specs: ['Full-body cardio', 'Low-impact stride', 'Endurance training'],
+    ),
+    Equipment(
+      name: 'Hyper Extension',
+      category: 'BODYWEIGHT',
+      image: 'assets/NewEquip/Hyper-Extension.png',
+      description:
+          'Back-extension bench for posterior-chain training, core control and lower-back strength.',
+      specs: [
+        'Adjustable support',
+        'Posterior-chain focus',
+        'Bodyweight strength',
+      ],
+    ),
+    Equipment(
+      name: 'Kettlebell',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/kettlebell.png',
+      description:
+          'Compact kettlebell for swings, carries, squats and explosive conditioning workouts.',
+      specs: [
+        'Functional training',
+        'Grip and core work',
+        'Conditioning friendly',
+      ],
+    ),
+    Equipment(
+      name: 'Lateral Raise Machine',
+      category: 'PIN LOADED',
+      image: 'assets/NewEquip/LATERAL-RAISE.png',
+      description:
+          'Shoulder isolation machine for strict lateral raises and controlled deltoid development.',
+      specs: ['Deltoid isolation', 'Guided movement path', 'Adjustable seat'],
+    ),
+    Equipment(
+      name: 'Leg Curl & Extension',
+      category: 'PIN LOADED',
+      image: 'assets/NewEquip/leg-curlandextension.png',
+      description:
+          'Dual-function leg station for hamstring curls and quadriceps extensions in one machine.',
+      specs: [
+        'Two-in-one leg training',
+        'Adjustable pads',
+        'Controlled isolation',
+      ],
+    ),
+    Equipment(
+      name: 'Multi Press',
+      category: 'PIN LOADED',
+      image: 'assets/NewEquip/Multi-Press-New.png',
+      description:
+          'Guided press station for chest, shoulder and upper-body strength with stable support.',
+      specs: [
+        'Multi-angle pressing',
+        'Upper-body strength',
+        'Guided resistance',
+      ],
+    ),
+    Equipment(
+      name: 'Multi Adjustable Bench',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/multiadjustablebench.png',
+      description:
+          'Adjustable bench for flat, incline and upright lifting positions during free-weight training.',
+      specs: ['Multiple bench angles', 'Free-weight support', 'Stable base'],
+    ),
+    Equipment(
+      name: 'Weight Plates',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/plates.png',
+      description:
+          'Durable plates for barbells, plate-loaded machines and progressive strength training.',
+      specs: [
+        'Progressive loading',
+        'Barbell compatible',
+        'Machine compatible',
+      ],
+    ),
+    Equipment(
+      name: 'Power Rack',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/power-rack.png',
+      description:
+          'Heavy-duty rack for squats, presses, pull-ups and barbell training with safety support.',
+      specs: [
+        'Squat and press station',
+        'Safety supports',
+        'Pull-up compatible',
+      ],
+    ),
+    Equipment(
+      name: 'Preacher Curl',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/Preacher-Curl.png',
+      description:
+          'Arm-training bench that supports strict preacher curls and focused biceps isolation.',
+      specs: ['Biceps isolation', 'Angled arm pad', 'Curl support'],
+    ),
+    Equipment(
+      name: 'Utility Bench',
+      category: 'FREE WEIGHTS',
+      image: 'assets/NewEquip/utilitybench.png',
+      description:
+          'Compact bench for dumbbell work, seated movements and accessory strength exercises.',
+      specs: ['Accessory training', 'Compact footprint', 'Stable support'],
+    ),
   ],
 );
