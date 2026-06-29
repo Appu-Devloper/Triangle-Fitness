@@ -1,21 +1,40 @@
-      - name: Deploy to Firebase Hosting
-        shell: bash
+name: Deploy to Firebase Hosting on merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Clean Flutter
+        run: flutter clean
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter web
+        run: flutter build web --release
+
+      - name: Create Firebase service account file
         run: |
-          set +e
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRIANGLE_FITNESS }}' > firebase-service-account.json
 
-          OUTPUT=$(npx firebase-tools@15.22.3 deploy --only hosting --project triangle-fitness --non-interactive 2>&1)
-          STATUS=$?
-
-          echo "$OUTPUT"
-
-          if [ $STATUS -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "is the current active version"; then
-              echo "Firebase Hosting version is already active. Treating deploy as successful."
-              exit 0
-            fi
-
-            exit $STATUS
-          fi
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools@15.22.3 deploy --only hosting --project triangle-fitness --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/firebase-service-account.json
-          #
