@@ -70,7 +70,10 @@ void main() {
     expect(find.text('Welcome, Nandhi Admin'), findsOneWidget);
     expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
     expect(find.text('TOTAL MEMBERS'), findsOneWidget);
-    expect(find.byKey(const ValueKey('admin-mobile-tab-overview')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('admin-mobile-tab-overview')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -150,15 +153,19 @@ class _AdminPageRepository implements AuthRepository {
   bool didSignOut = false;
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() async {
+  Future<AdminDashboard> getCurrentAdminDashboard({
+    DateTime? periodStart,
+  }) async {
     if (failure case final value?) throw value;
-    return const AdminDashboard(
+    return AdminDashboard(
       adminName: 'Nandhi Admin',
       totalMembers: 24,
       activeMembers: 18,
       expiredMembers: 6,
       totalPayments: 31,
       totalPaymentAmount: 125000,
+      collectionPeriodStart: DateTime(2026, 6, 10),
+      collectionPeriodEnd: DateTime(2026, 7, 10),
       totalTransformations: 8,
     );
   }

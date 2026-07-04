@@ -7,13 +7,17 @@ import 'package:triangle_fitness/features/auth/domain/repositories/auth_reposito
 import 'package:triangle_fitness/features/auth/presentation/cubit/admin_dashboard_cubit.dart';
 
 void main() {
-  const dashboard = AdminDashboard(
+  final periodStart = DateTime(2026, 6, 10);
+  final periodEnd = DateTime(2026, 7, 10);
+  final dashboard = AdminDashboard(
     adminName: 'Nandhi Admin',
     totalMembers: 24,
     activeMembers: 18,
     expiredMembers: 6,
     totalPayments: 31,
     totalPaymentAmount: 125000,
+    collectionPeriodStart: periodStart,
+    collectionPeriodEnd: periodEnd,
     totalTransformations: 8,
   );
 
@@ -21,12 +25,16 @@ void main() {
     'loads admin dashboard metrics',
     build: () =>
         AdminDashboardCubit(_AdminDashboardRepository(dashboard: dashboard)),
-    act: (cubit) => cubit.load(),
-    expect: () => const [
-      AdminDashboardState(status: AdminDashboardStatus.loading),
+    act: (cubit) => cubit.load(periodStart: periodStart),
+    expect: () => [
+      AdminDashboardState(
+        status: AdminDashboardStatus.loading,
+        periodStart: periodStart,
+      ),
       AdminDashboardState(
         status: AdminDashboardStatus.success,
         dashboard: dashboard,
+        periodStart: periodStart,
       ),
     ],
   );
@@ -34,17 +42,21 @@ void main() {
   blocTest<AdminDashboardCubit, AdminDashboardState>(
     'shows an error when the admin document is missing',
     build: () => AdminDashboardCubit(
-      const _AdminDashboardRepository(
+      _AdminDashboardRepository(
         dashboard: dashboard,
         failure: AuthFailure('Admin profile not found'),
       ),
     ),
-    act: (cubit) => cubit.load(),
-    expect: () => const [
-      AdminDashboardState(status: AdminDashboardStatus.loading),
+    act: (cubit) => cubit.load(periodStart: periodStart),
+    expect: () => [
+      AdminDashboardState(
+        status: AdminDashboardStatus.loading,
+        periodStart: periodStart,
+      ),
       AdminDashboardState(
         status: AdminDashboardStatus.failure,
         message: 'Admin profile not found',
+        periodStart: periodStart,
       ),
     ],
   );
@@ -57,7 +69,9 @@ class _AdminDashboardRepository implements AuthRepository {
   final AuthFailure? failure;
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() async {
+  Future<AdminDashboard> getCurrentAdminDashboard({
+    DateTime? periodStart,
+  }) async {
     if (failure case final value?) throw value;
     return dashboard;
   }

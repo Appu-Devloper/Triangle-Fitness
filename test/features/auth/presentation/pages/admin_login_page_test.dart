@@ -24,10 +24,7 @@ void main() {
     final repository = _AdminPageRepository(
       adminFailure: const AuthFailure('Admin access denied'),
     );
-    await _pumpPage(
-      tester,
-      repository,
-    );
+    await _pumpPage(tester, repository);
 
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'password');
@@ -37,10 +34,7 @@ void main() {
 
     expect(find.text('Admin access denied'), findsOneWidget);
     expect(find.byKey(const Key('admin-login-error')), findsOneWidget);
-    expect(
-      repository.capturedEmail,
-      'trianglefitness.krs@gmail.com',
-    );
+    expect(repository.capturedEmail, 'trianglefitness.krs@gmail.com');
     expect(repository.capturedPassword, 'password');
   });
 
@@ -108,7 +102,7 @@ class _AdminPageRepository implements AuthRepository {
   }
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() {
+  Future<AdminDashboard> getCurrentAdminDashboard({DateTime? periodStart}) {
     throw UnimplementedError();
   }
 

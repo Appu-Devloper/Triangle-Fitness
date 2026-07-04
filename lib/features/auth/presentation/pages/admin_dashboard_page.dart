@@ -113,6 +113,7 @@ class _DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final periodStart = dashboard.collectionPeriodStart;
     final stats = [
       _AdminStat(
         label: 'TOTAL MEMBERS',
@@ -136,9 +137,12 @@ class _DashboardContent extends StatelessWidget {
         color: AppColors.red,
       ),
       _AdminStat(
-        label: 'TOTAL PAYMENTS',
+        label: 'MONTH PAYMENTS',
         value: dashboard.totalPayments.toString(),
-        caption: _formatCurrency(dashboard.totalPaymentAmount),
+        caption: _formatPeriodRange(
+          dashboard.collectionPeriodStart,
+          dashboard.collectionPeriodEnd,
+        ),
         icon: Icons.account_balance_wallet_rounded,
         color: _warning,
       ),
@@ -158,6 +162,13 @@ class _DashboardContent extends StatelessWidget {
                 const _SectionHeading(
                   title: 'Business overview',
                   subtitle: 'Live totals from your Firestore records',
+                ),
+                const SizedBox(height: 14),
+                _CollectionPeriodSelector(
+                  selected: periodStart,
+                  onSelected: (value) => context
+                      .read<AdminDashboardCubit>()
+                      .load(periodStart: value),
                 ),
                 const SizedBox(height: 14),
                 _StatsGrid(stats: stats),
@@ -358,6 +369,209 @@ class _SectionHeading extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CollectionPeriodSelector extends StatelessWidget {
+  const _CollectionPeriodSelector({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final DateTime selected;
+  final ValueChanged<DateTime> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentYear = DateTime.now().year;
+    final years = List<int>.generate(
+      currentYear - 2025 + 1,
+      (index) => currentYear - index,
+    );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _card,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final title = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'COLLECTION MONTH',
+                style: TextStyle(
+                  color: _darkText,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatPeriodRange(
+                  selected,
+                  DateTime(selected.year, selected.month + 1, 10),
+                ),
+                style: const TextStyle(
+                  color: _softText,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          );
+          final controls = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PeriodDropdown<int>(
+                label: 'MONTH',
+                icon: Icons.calendar_month_rounded,
+                value: selected.month,
+                items: [
+                  for (var month = 1; month <= 12; month += 1)
+                    PopupMenuItem<int>(
+                      value: month,
+                      child: Text(_monthName(month)),
+                    ),
+                ],
+                displayValue: _monthName(selected.month),
+                onSelected: (month) =>
+                    onSelected(DateTime(selected.year, month, 10)),
+              ),
+              const SizedBox(width: 10),
+              _PeriodDropdown<int>(
+                label: 'YEAR',
+                icon: Icons.event_rounded,
+                value: selected.year,
+                items: [
+                  for (final year in years)
+                    PopupMenuItem<int>(
+                      value: year,
+                      child: Text(year.toString()),
+                    ),
+                ],
+                displayValue: selected.year.toString(),
+                onSelected: (year) =>
+                    onSelected(DateTime(year, selected.month, 10)),
+              ),
+            ],
+          );
+          if (constraints.maxWidth < 620) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                title,
+                const SizedBox(height: 14),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: controls,
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 16),
+              controls,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PeriodDropdown<T> extends StatelessWidget {
+  const _PeriodDropdown({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.items,
+    required this.displayValue,
+    required this.onSelected,
+  });
+
+  final String label;
+  final IconData icon;
+  final T value;
+  final List<PopupMenuEntry<T>> items;
+  final String displayValue;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<T>(
+      tooltip: 'Select ${label.toLowerCase()}',
+      initialValue: value,
+      onSelected: onSelected,
+      itemBuilder: (context) => items,
+      child: Container(
+        width: 156,
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        decoration: BoxDecoration(
+          color: AdminWorkspaceColors.field,
+          border: Border.all(color: AdminWorkspaceColors.borderStrong),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: AppColors.red, size: 17),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _softText,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    displayValue,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _darkText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.expand_more_rounded, color: _softText, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -565,8 +779,8 @@ class _CollectionSummary extends StatelessWidget {
         children: [
           const _InfoTitle(
             icon: Icons.currency_rupee_rounded,
-            title: 'Payment collection',
-            subtitle: 'Recorded payment value',
+            title: 'Monthly collection',
+            subtitle: 'Payments received from 10th to 10th',
           ),
           const SizedBox(height: 20),
           Text(
@@ -580,7 +794,7 @@ class _CollectionSummary extends StatelessWidget {
           ),
           const SizedBox(height: 5),
           Text(
-            '${dashboard.totalPayments} payment records',
+            '${dashboard.totalPayments} payment records  •  ${_formatPeriodRange(dashboard.collectionPeriodStart, dashboard.collectionPeriodEnd)}',
             style: const TextStyle(color: _softText, fontSize: 11),
           ),
         ],
@@ -983,4 +1197,29 @@ String _formatCurrency(double amount) {
       ? amount.toStringAsFixed(0)
       : amount.toStringAsFixed(2);
   return 'Rs. $value';
+}
+
+String _formatPeriodRange(DateTime start, DateTime end) {
+  return '${_formatDayMonth(start)} - ${_formatDayMonth(end)}';
+}
+
+String _formatDayMonth(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year}';
+
+String _monthName(int month) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return months[month - 1];
 }

@@ -17,14 +17,16 @@ class AdminDashboardState extends Equatable {
     this.status = AdminDashboardStatus.initial,
     this.dashboard,
     this.message,
+    this.periodStart,
   });
 
   final AdminDashboardStatus status;
   final AdminDashboard? dashboard;
   final String? message;
+  final DateTime? periodStart;
 
   @override
-  List<Object?> get props => [status, dashboard, message];
+  List<Object?> get props => [status, dashboard, message, periodStart];
 }
 
 class AdminDashboardCubit extends Cubit<AdminDashboardState> {
@@ -32,14 +34,26 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
 
   final AuthRepository _repository;
 
-  Future<void> load() async {
-    emit(const AdminDashboardState(status: AdminDashboardStatus.loading));
+  Future<void> load({DateTime? periodStart}) async {
+    final selectedPeriod = _collectionPeriodStart(
+      periodStart ?? state.periodStart ?? DateTime.now(),
+    );
+    emit(
+      AdminDashboardState(
+        status: AdminDashboardStatus.loading,
+        dashboard: state.dashboard,
+        periodStart: selectedPeriod,
+      ),
+    );
     try {
-      final dashboard = await _repository.getCurrentAdminDashboard();
+      final dashboard = await _repository.getCurrentAdminDashboard(
+        periodStart: selectedPeriod,
+      );
       emit(
         AdminDashboardState(
           status: AdminDashboardStatus.success,
           dashboard: dashboard,
+          periodStart: selectedPeriod,
         ),
       );
     } on AuthFailure catch (error) {
@@ -47,6 +61,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         AdminDashboardState(
           status: AdminDashboardStatus.failure,
           message: error.message,
+          periodStart: selectedPeriod,
         ),
       );
     } on Object catch (error) {
@@ -54,6 +69,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         AdminDashboardState(
           status: AdminDashboardStatus.failure,
           message: error.toString(),
+          periodStart: selectedPeriod,
         ),
       );
     }
@@ -64,6 +80,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       AdminDashboardState(
         status: AdminDashboardStatus.signingOut,
         dashboard: state.dashboard,
+        periodStart: state.periodStart,
       ),
     );
     try {
@@ -75,8 +92,15 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
           status: AdminDashboardStatus.failure,
           dashboard: state.dashboard,
           message: error.toString(),
+          periodStart: state.periodStart,
         ),
       );
     }
+  }
+
+  DateTime _collectionPeriodStart(DateTime value) {
+    final day = DateTime(value.year, value.month, value.day);
+    if (day.day >= 10) return DateTime(day.year, day.month, 10);
+    return DateTime(day.year, day.month - 1, 10);
   }
 }

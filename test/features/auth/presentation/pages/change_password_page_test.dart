@@ -132,7 +132,7 @@ class _PageAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() {
+  Future<AdminDashboard> getCurrentAdminDashboard({DateTime? periodStart}) {
     throw UnimplementedError();
   }
 

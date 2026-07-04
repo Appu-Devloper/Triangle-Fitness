@@ -8,6 +8,8 @@ class AdminDashboard extends Equatable {
     required this.expiredMembers,
     required this.totalPayments,
     required this.totalPaymentAmount,
+    required this.collectionPeriodStart,
+    required this.collectionPeriodEnd,
     required this.totalTransformations,
   });
 
@@ -17,6 +19,8 @@ class AdminDashboard extends Equatable {
   final int expiredMembers;
   final int totalPayments;
   final double totalPaymentAmount;
+  final DateTime collectionPeriodStart;
+  final DateTime collectionPeriodEnd;
   final int totalTransformations;
 
   @override
@@ -27,6 +31,8 @@ class AdminDashboard extends Equatable {
     expiredMembers,
     totalPayments,
     totalPaymentAmount,
+    collectionPeriodStart,
+    collectionPeriodEnd,
     totalTransformations,
   ];
 }

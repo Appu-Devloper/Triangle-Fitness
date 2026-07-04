@@ -14,7 +14,7 @@ abstract interface class AuthRepository {
 
   Future<MemberDashboard> getCurrentMemberDashboard();
 
-  Future<AdminDashboard> getCurrentAdminDashboard();
+  Future<AdminDashboard> getCurrentAdminDashboard({DateTime? periodStart});
 
   Future<void> signOut();
 }

@@ -247,7 +247,7 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() {
+  Future<AdminDashboard> getCurrentAdminDashboard({DateTime? periodStart}) {
     throw UnimplementedError();
   }
 

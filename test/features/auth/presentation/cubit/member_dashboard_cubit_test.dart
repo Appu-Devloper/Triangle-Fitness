@@ -104,7 +104,7 @@ class _DashboardRepository implements AuthRepository {
   }
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() {
+  Future<AdminDashboard> getCurrentAdminDashboard({DateTime? periodStart}) {
     throw UnimplementedError();
   }
 

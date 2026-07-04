@@ -37,7 +37,10 @@ class FirebaseAuthRepository implements AuthRepository {
   }) async {
     try {
       await _initializer.initialize();
-      final credential = await _signInMemberWithReceiptFallback(phone, password);
+      final credential = await _signInMemberWithReceiptFallback(
+        phone,
+        password,
+      );
       final uid = credential.user?.uid;
       if (uid == null) {
         throw const AuthFailure('Unable to identify this member account.');
@@ -285,7 +288,9 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AdminDashboard> getCurrentAdminDashboard() async {
+  Future<AdminDashboard> getCurrentAdminDashboard({
+    DateTime? periodStart,
+  }) async {
     try {
       await _initializer.initialize();
       final user = _auth.currentUser;
@@ -307,9 +312,28 @@ class FirebaseAuthRepository implements AuthRepository {
         throw const AuthFailure('Admin access denied');
       }
 
+      final collectionPeriodStart = _collectionPeriodStart(
+        periodStart ?? DateTime.now(),
+      );
+      final collectionPeriodEnd = DateTime(
+        collectionPeriodStart.year,
+        collectionPeriodStart.month + 1,
+        10,
+      );
+
       final results = await Future.wait([
         _firestore.collection('members').get(),
-        _firestore.collection('payments').get(),
+        _firestore
+            .collection('payments')
+            .where(
+              'paymentDate',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(collectionPeriodStart),
+            )
+            .where(
+              'paymentDate',
+              isLessThan: Timestamp.fromDate(collectionPeriodEnd),
+            )
+            .get(),
         _firestore.collection('transformations').get(),
       ]);
       final members = results[0];
@@ -362,6 +386,8 @@ class FirebaseAuthRepository implements AuthRepository {
         expiredMembers: expiredMembers,
         totalPayments: payments.docs.length,
         totalPaymentAmount: totalPaymentAmount,
+        collectionPeriodStart: collectionPeriodStart,
+        collectionPeriodEnd: collectionPeriodEnd,
         totalTransformations: transformations.docs.length,
       );
     } on AuthFailure {
@@ -421,6 +447,12 @@ class FirebaseAuthRepository implements AuthRepository {
     if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
     if (value is String) return DateTime.tryParse(value);
     return null;
+  }
+
+  DateTime _collectionPeriodStart(DateTime value) {
+    final day = DateTime(value.year, value.month, value.day);
+    if (day.day >= 10) return DateTime(day.year, day.month, 10);
+    return DateTime(day.year, day.month - 1, 10);
   }
 
   Future<void> _safeSignOut() async {
