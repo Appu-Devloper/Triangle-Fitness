@@ -100,7 +100,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
 
   DateTime _collectionPeriodStart(DateTime value) {
     final day = DateTime(value.year, value.month, value.day);
-    if (day.day >= 10) return DateTime(day.year, day.month, 10);
-    return DateTime(day.year, day.month - 1, 10);
+    if (day.day >= 11) return DateTime(day.year, day.month, 11);
+    return DateTime(day.year, day.month - 1, 11);
   }
 }

@@ -447,7 +447,7 @@ class _CollectionPeriodSelector extends StatelessWidget {
                 ],
                 displayValue: _monthName(selected.month),
                 onSelected: (month) =>
-                    onSelected(DateTime(selected.year, month, 10)),
+                    onSelected(DateTime(selected.year, month, 11)),
               ),
               const SizedBox(width: 10),
               _PeriodDropdown<int>(
@@ -463,7 +463,7 @@ class _CollectionPeriodSelector extends StatelessWidget {
                 ],
                 displayValue: selected.year.toString(),
                 onSelected: (year) =>
-                    onSelected(DateTime(year, selected.month, 10)),
+                    onSelected(DateTime(year, selected.month, 11)),
               ),
             ],
           );
@@ -780,7 +780,7 @@ class _CollectionSummary extends StatelessWidget {
           const _InfoTitle(
             icon: Icons.currency_rupee_rounded,
             title: 'Monthly collection',
-            subtitle: 'Payments received from 10th to 10th',
+            subtitle: 'Payments received from 11th to 10th',
           ),
           const SizedBox(height: 20),
           Text(

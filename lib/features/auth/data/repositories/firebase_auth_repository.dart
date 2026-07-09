@@ -320,6 +320,11 @@ class FirebaseAuthRepository implements AuthRepository {
         collectionPeriodStart.month + 1,
         10,
       );
+      final collectionPeriodEndExclusive = DateTime(
+        collectionPeriodStart.year,
+        collectionPeriodStart.month + 1,
+        11,
+      );
 
       final results = await Future.wait([
         _firestore.collection('members').get(),
@@ -331,7 +336,7 @@ class FirebaseAuthRepository implements AuthRepository {
             )
             .where(
               'paymentDate',
-              isLessThan: Timestamp.fromDate(collectionPeriodEnd),
+              isLessThan: Timestamp.fromDate(collectionPeriodEndExclusive),
             )
             .get(),
         _firestore.collection('transformations').get(),
@@ -451,8 +456,8 @@ class FirebaseAuthRepository implements AuthRepository {
 
   DateTime _collectionPeriodStart(DateTime value) {
     final day = DateTime(value.year, value.month, value.day);
-    if (day.day >= 10) return DateTime(day.year, day.month, 10);
-    return DateTime(day.year, day.month - 1, 10);
+    if (day.day >= 11) return DateTime(day.year, day.month, 11);
+    return DateTime(day.year, day.month - 1, 11);
   }
 
   Future<void> _safeSignOut() async {
