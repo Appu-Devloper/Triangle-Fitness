@@ -42,10 +42,8 @@ class _EditMemberPageState extends State<EditMemberPage> {
   Future<void> _loadMember() async {
     setState(() => _statusLoad = _LoadStatus.loading);
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('members')
-          .doc(widget.memberId)
-          .get();
+      final firestore = FirebaseFirestore.instance;
+      final doc = await firestore.collection('members').doc(widget.memberId).get();
       if (!doc.exists || doc.data() == null) {
         setState(() => _statusLoad = _LoadStatus.notFound);
         return;
@@ -100,9 +98,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
 
       // update linked userCredentials if uid exists
       if (_uid != null && _uid!.isNotEmpty) {
-        final credRef = FirebaseFirestore.instance
-            .collection('userCredentials')
-            .doc(_uid);
+        final credRef = FirebaseFirestore.instance.collection('userCredentials').doc(_uid);
         await credRef.set({
           'memberCode': normalizeMemberCode(_memberCode.text),
           'phone': _phone.text.trim(),
@@ -382,7 +378,6 @@ class _EditMemberPageState extends State<EditMemberPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
                 Row(
                   children: [
                     TextButton(
@@ -421,6 +416,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
     List<TextInputFormatter>? inputFormatters,
     String? prefixText,
     int maxLines = 1,
+    bool readOnly = false,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
@@ -428,6 +424,7 @@ class _EditMemberPageState extends State<EditMemberPage> {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       maxLines: maxLines,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
@@ -585,6 +582,3 @@ class _FieldSlot {
   final Widget child;
   final bool fullWidth;
 }
-
-
-

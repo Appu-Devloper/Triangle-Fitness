@@ -1123,7 +1123,7 @@ class _AdminSectionPage extends StatelessWidget {
 const _adminActions = [
   _AdminAction('Members', Icons.groups_2_rounded),
   _AdminAction('Add Member', Icons.person_add_alt_1_rounded),
-  _AdminAction('Payments', Icons.payments_rounded),
+  _AdminAction('All Transactions', Icons.payments_rounded),
   _AdminAction('Subscriptions', Icons.card_membership_rounded),
   _AdminAction('Settings', Icons.settings_rounded),
 ];
@@ -1167,7 +1167,7 @@ Future<void> _openSection(BuildContext context, String title) async {
     await context.read<AdminDashboardCubit>().load();
     return;
   }
-  if (title == 'Payments') {
+  if (title == 'All Transactions' || title == 'Payments') {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const PaymentsListPage()));

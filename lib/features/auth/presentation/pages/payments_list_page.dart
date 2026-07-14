@@ -171,8 +171,8 @@ class _PaymentsListPageState extends State<PaymentsListPage> {
   Widget build(BuildContext context) {
     return AdminWorkspaceScaffold(
       section: AdminWorkspaceSection.payments,
-      title: 'Payments',
-      subtitle: 'Track collections, pending balances and payment activity',
+      title: 'ALL TRANSACTIONS',
+      subtitle: 'Review every member payment and renewal record',
       body: StreamBuilder<List<PaymentRecord>>(
         stream: _paymentsStream,
         builder: (context, snapshot) {
