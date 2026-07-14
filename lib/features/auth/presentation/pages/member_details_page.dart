@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +5,7 @@ import 'package:triangle_fitness/core/theme/app_colors.dart';
 import 'package:triangle_fitness/features/auth/domain/entities/admin_member.dart';
 import 'package:triangle_fitness/features/auth/domain/repositories/member_management_repository.dart';
 import 'package:triangle_fitness/features/auth/presentation/pages/edit_member_page.dart';
+import 'package:triangle_fitness/features/auth/presentation/pages/renew_subscription_page.dart';
 
 const _detailsBackground = AppColors.ink;
 const _detailsText = AppColors.paper;
@@ -32,6 +32,17 @@ class MemberDetailsPage extends StatelessWidget {
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
           actions: [
+            IconButton(
+              tooltip: 'Renew subscription',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => RenewSubscriptionPage(memberId: memberId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.autorenew_rounded, color: Color(0xFF55CA82)),
+            ),
             IconButton(
               tooltip: 'Edit member details',
               onPressed: () {
@@ -316,7 +327,6 @@ class _MemberDetails extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              _TransactionsCard(memberId: member.id),
             ],
           ),
         ),
@@ -434,21 +444,6 @@ class _StatusBadge extends StatelessWidget {
 
 String _fallback(String value) =>
     value.trim().isEmpty ? 'Not available' : value;
-
-String _text(Object? value) => value?.toString().trim() ?? '';
-
-double _amount(Object? value) {
-  if (value is num) return value.toDouble();
-  return double.tryParse(value?.toString() ?? '') ?? 0;
-}
-
-DateTime? _date(Object? value) {
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
 
 String _measurement(double? value, String unit) {
   return value == null ? 'Not added' : '${_number(value)} $unit';
@@ -583,204 +578,6 @@ class _StatBox extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TransactionsCard extends StatelessWidget {
-  const _TransactionsCard({required this.memberId});
-
-  final String memberId;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DetailsCard(
-      title: 'Transactions',
-      icon: Icons.receipt_long_rounded,
-      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('payments')
-            .where('memberId', isEqualTo: memberId)
-            .orderBy('paymentDate', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                'Unable to load transactions',
-                style: TextStyle(color: _detailsText),
-              ),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.red),
-              ),
-            );
-          }
-
-          final transactions = snapshot.data!.docs
-              .map(_MemberTransaction.fromFirestore)
-              .toList(growable: false);
-          if (transactions.isEmpty) {
-            return const _EmptyTransactions();
-          }
-
-          return Column(
-            children: [
-              for (final entry in transactions.indexed)
-                _TransactionRow(
-                  transaction: entry.$2,
-                  last: entry.$1 == transactions.length - 1,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _MemberTransaction {
-  const _MemberTransaction({
-    required this.receiptNo,
-    required this.amount,
-    required this.paymentMode,
-    required this.paymentStatus,
-    required this.paymentDate,
-    required this.subscriptionStartDate,
-    required this.subscriptionEndDate,
-  });
-
-  factory _MemberTransaction.fromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    return _MemberTransaction(
-      receiptNo: _text(data['receiptNo']),
-      amount: _amount(data['amount']),
-      paymentMode: _text(data['paymentMode']),
-      paymentStatus: _text(data['paymentStatus']),
-      paymentDate: _date(data['paymentDate']),
-      subscriptionStartDate: _date(data['subscriptionStartDate']),
-      subscriptionEndDate: _date(data['subscriptionEndDate']),
-    );
-  }
-
-  final String receiptNo;
-  final double amount;
-  final String paymentMode;
-  final String paymentStatus;
-  final DateTime? paymentDate;
-  final DateTime? subscriptionStartDate;
-  final DateTime? subscriptionEndDate;
-}
-
-class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({
-    required this.transaction,
-    required this.last,
-  });
-
-  final _MemberTransaction transaction;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final paymentDate = _formatDate(transaction.paymentDate);
-    final subscriptionRange =
-        '${_formatDate(transaction.subscriptionStartDate)} to ${_formatDate(transaction.subscriptionEndDate)}';
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.payments_rounded,
-                  color: AppColors.red,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      transaction.receiptNo.isEmpty
-                          ? 'Payment'
-                          : 'Receipt ${transaction.receiptNo}',
-                      style: const TextStyle(
-                        color: _detailsText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${transaction.paymentMode}  •  ${transaction.paymentStatus}',
-                      style: const TextStyle(
-                        color: _detailsMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '₹${_number(transaction.amount)}  •  $paymentDate',
-                      style: const TextStyle(
-                        color: _detailsMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                    if (transaction.subscriptionStartDate != null ||
-                        transaction.subscriptionEndDate != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Subscription: $subscriptionRange',
-                        style: const TextStyle(
-                          color: _detailsMuted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (!last) const Divider(height: 1, color: _detailsLine),
-      ],
-    );
-  }
-}
-
-class _EmptyTransactions extends StatelessWidget {
-  const _EmptyTransactions();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 18),
-      child: Center(
-        child: Text(
-          'No transactions found',
-          style: TextStyle(color: _detailsMuted),
-        ),
       ),
     );
   }
